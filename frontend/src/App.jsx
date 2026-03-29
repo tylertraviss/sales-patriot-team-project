@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import Dashboard from './pages/Dashboard';
 import Upload from './pages/Upload';
+import Vendors from './pages/Vendors';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
+  { id: 'vendors',   label: 'Vendors' },
   { id: 'upload',    label: 'Upload Data' },
 ];
 
@@ -40,6 +42,7 @@ export default function App() {
       {/* Page content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activePage === 'dashboard' && <Dashboard />}
+        {activePage === 'vendors'   && <Vendors />}
         {activePage === 'upload'    && <Upload />}
       </main>
     </div>
