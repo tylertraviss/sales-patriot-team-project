@@ -212,7 +212,7 @@ function GeographicClustering() {
     setLoading(true);
     setError(null);
     setExpanded(null);
-    const params = { limit: 10 };
+    const params = { limit: 60 };
     if (year !== 'All') params.year = year;
     getGeographicClustering(params)
       .then((res) => setData(res.data ?? []))

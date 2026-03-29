@@ -19,13 +19,14 @@ const DEFAULT_FILTERS = {
   setAsideType: '',
 };
 
-const DEFAULT_SORT = { sort: 'total_obligated', order: 'desc' };
+const DEFAULT_SORT = { sort: 'totalObligated', order: 'desc' };
 const DEFAULT_PAGE = { page: 1, limit: 25 };
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 
-const GLOBE_LIMIT = 500;
+const GLOBE_PAGE_SIZE = 100;  // backend hard cap
+const GLOBE_MAX_PAGES = 20;   // 20 × 100 = 2,000 vendors max
 
 export default function Vendors() {
   const [viewMode, setViewMode] = useState('table');
@@ -39,6 +40,8 @@ export default function Vendors() {
 
   const [data, setData] = useState([]);
   const [allVendors, setAllVendors] = useState([]);
+  const [allVendorsTotal, setAllVendorsTotal] = useState(0);
+  const [globeLoading, setGlobeLoading] = useState(false);
   const [paginationMeta, setPaginationMeta] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -103,16 +106,47 @@ export default function Vendors() {
 
   useEffect(() => { fetchVendors(); }, [fetchVendors]);
 
-  // Fetch all vendors for globe (once, unfiltered, high limit)
+  // Fetch all vendors for globe — paginate up to 2,000 in parallel
   useEffect(() => {
     async function loadAll() {
+      setGlobeLoading(true);
       try {
-        const json = USE_MOCK
-          ? await mockGetVendors({ page: 1, limit: GLOBE_LIMIT, sort: 'totalObligated', order: 'desc' })
-          : await fetch(`${BASE_URL}/vendors?page=1&limit=${GLOBE_LIMIT}&sort=total_obligated&order=desc`)
-              .then((r) => r.json());
-        setAllVendors(json.data ?? []);
-      } catch { /* silent — globe just shows fewer pins */ }
+        if (USE_MOCK) {
+          const json = await mockGetVendors({ page: 1, limit: 500, sort: 'totalObligated', order: 'desc' });
+          setAllVendors(json.data ?? []);
+          setAllVendorsTotal(json.pagination?.total ?? 0);
+          return;
+        }
+
+        // First request to find out total pages
+        const first = await fetch(
+          `${BASE_URL}/vendors?page=1&limit=${GLOBE_PAGE_SIZE}&sort=totalObligated&order=desc`
+        ).then((r) => r.json());
+
+        const total      = first.pagination?.total ?? 0;
+        const totalPages = first.pagination?.totalPages ?? 1;
+        const pagesToFetch = Math.min(GLOBE_MAX_PAGES, totalPages);
+
+        setAllVendorsTotal(total);
+
+        // Fire remaining pages in parallel
+        const restPromises = [];
+        for (let p = 2; p <= pagesToFetch; p++) {
+          restPromises.push(
+            fetch(`${BASE_URL}/vendors?page=${p}&limit=${GLOBE_PAGE_SIZE}&sort=totalObligated&order=desc`)
+              .then((r) => r.json())
+              .then((j) => j.data ?? [])
+              .catch(() => [])
+          );
+        }
+        const restPages = await Promise.all(restPromises);
+        const all = [...(first.data ?? []), ...restPages.flat()];
+        setAllVendors(all);
+      } catch {
+        /* silent — globe shows whatever loaded */
+      } finally {
+        setGlobeLoading(false);
+      }
     }
     loadAll();
   }, []);
@@ -238,6 +272,8 @@ export default function Vendors() {
         }>
           <VendorGlobe
             vendors={allVendors.length ? allVendors : data}
+            totalVendors={allVendorsTotal}
+            loading={globeLoading}
             onVendorClick={handleRowClick}
           />
         </Suspense>
@@ -254,7 +290,7 @@ export default function Vendors() {
 
       {/* Vendor detail drawer — shared between both views */}
       <VendorDetailDrawer
-        cageCode={selectedVendor?.cageCode}
+        cageCode={selectedVendor?.cageCode ?? selectedVendor?.uei}
         vendorName={selectedVendor?.name}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}

@@ -479,14 +479,14 @@ router.get('/geographic-clustering', async (req, res, next) => {
     const statesResult = await db.query(`
       SELECT
         a.place_of_performance_state_code                     AS "stateCode",
-        a.place_of_performance_state_name                     AS "stateName",
+        MAX(a.place_of_performance_state_name)                AS "stateName",
         COUNT(*)                                              AS "awardCount",
         SUM(a.award_amount)                                   AS "totalObligated",
         ROUND(100.0 * SUM(a.award_amount)
           / NULLIF(SUM(SUM(a.award_amount)) OVER (), 0), 2)  AS "pctOfNationalTotal"
       FROM award_transactions a
       ${where}
-      GROUP BY a.place_of_performance_state_code, a.place_of_performance_state_name
+      GROUP BY a.place_of_performance_state_code
       ORDER BY "totalObligated" DESC
     `, values);
 

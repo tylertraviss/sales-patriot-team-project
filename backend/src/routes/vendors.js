@@ -123,10 +123,12 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-// GET /api/vendors/:cage_code
+// GET /api/vendors/:cage_code_or_uei
+// Accepts either a CAGE code or a UEI as the path parameter.
 router.get('/:cage_code', async (req, res, next) => {
   try {
     const { cage_code } = req.params;
+    const id = cage_code.toUpperCase();
 
     const result = await db.query(`
       SELECT
@@ -143,8 +145,8 @@ router.get('/:cage_code', async (req, res, next) => {
         COALESCE(s.total_obligated_amount, 0)             AS "totalObligated"
       FROM vendor_entities v
       LEFT JOIN vendor_investment_summary s ON s.cage_code = v.cage_code
-      WHERE v.cage_code = $1
-    `, [cage_code.toUpperCase()]);
+      WHERE v.cage_code = $1 OR v.uei = $1
+    `, [id]);
 
     if (!result.rows.length) {
       return res.status(404).json({ error: { status: 404, message: `Vendor ${cage_code} not found` } });
@@ -160,10 +162,11 @@ router.get('/:cage_code', async (req, res, next) => {
 router.get('/:cage_code/awards/summary', async (req, res, next) => {
   try {
     const { cage_code } = req.params;
+    const id = cage_code.toUpperCase();
 
     const vendorCheck = await db.query(
-      `SELECT vendor_id FROM vendor_entities WHERE cage_code = $1`,
-      [cage_code.toUpperCase()]
+      `SELECT vendor_id FROM vendor_entities WHERE cage_code = $1 OR uei = $1`,
+      [id]
     );
     if (!vendorCheck.rows.length) {
       return res.status(404).json({ error: { status: 404, message: `Vendor ${cage_code} not found` } });
@@ -240,6 +243,7 @@ router.get('/:cage_code/awards/summary', async (req, res, next) => {
 router.get('/:cage_code/awards', async (req, res, next) => {
   try {
     const { cage_code } = req.params;
+    const id = cage_code.toUpperCase();
     const { sort = 'award_date', order = 'desc', page, limit } = req.query;
     const { page: p, limit: l, offset } = paginate(page, limit);
 
@@ -248,8 +252,8 @@ router.get('/:cage_code/awards', async (req, res, next) => {
     const dir = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
     const vendorCheck = await db.query(
-      `SELECT vendor_id FROM vendor_entities WHERE cage_code = $1`,
-      [cage_code.toUpperCase()]
+      `SELECT vendor_id FROM vendor_entities WHERE cage_code = $1 OR uei = $1`,
+      [id]
     );
     if (!vendorCheck.rows.length) {
       return res.status(404).json({ error: { status: 404, message: `Vendor ${cage_code} not found` } });
