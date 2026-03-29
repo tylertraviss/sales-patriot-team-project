@@ -1,6 +1,7 @@
 const express = require('express');
-const router = express.Router();
-const db = require('../db/connection');
+const router  = express.Router();
+const db      = require('../db/connection');
+const logger  = require('../logger');
 
 /**
  * Column definitions returned to the frontend so it can render
@@ -18,7 +19,8 @@ const AWARD_HEADERS = [
 
 // GET /api/awards/headers
 // Must be registered BEFORE /:cageCode to avoid route shadowing.
-router.get('/headers', (_req, res) => {
+router.get('/headers', (req, res) => {
+  logger.debug('headers requested', { requestId: req.id });
   res.json({ headers: AWARD_HEADERS });
 });
 
@@ -89,6 +91,14 @@ router.get('/', async (req, res, next) => {
 
     const total = parseInt(countResult.rows[0].total, 10);
 
+    logger.info('awards list served', {
+      requestId: req.id,
+      total,
+      page: pageNum,
+      limit: limitNum,
+      cageCode: cageCode || null,
+    });
+
     res.json({
       data:       dataResult.rows,
       pagination: {
@@ -145,6 +155,7 @@ router.get('/:cageCode', async (req, res, next) => {
     ]);
 
     if (companyResult.rows.length === 0) {
+      logger.warn('CAGE code not found', { requestId: req.id, cageCode });
       return res.status(404).json({ error: `CAGE code ${cageCode} not found` });
     }
 

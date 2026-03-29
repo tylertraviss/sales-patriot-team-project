@@ -1,7 +1,9 @@
 require('dotenv').config();
 
-const express      = require('express');
-const cors         = require('cors');
+const express         = require('express');
+const cors            = require('cors');
+const logger          = require('./logger');
+const requestLogger   = require('./middleware/requestLogger');
 const awardsRouter    = require('./routes/awards');
 const uploadRouter    = require('./routes/upload');
 const companiesRouter = require('./routes/companies');
@@ -13,6 +15,8 @@ const PORT = process.env.PORT || 4000;
 // ---------------------------------------------------------------------------
 // Middleware
 // ---------------------------------------------------------------------------
+app.use(requestLogger);
+
 app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -52,7 +56,7 @@ app.use(errorHandler);
 // Start
 // ---------------------------------------------------------------------------
 app.listen(PORT, () => {
-  console.log(`DLA Awards API listening on http://localhost:${PORT}`);
+  logger.info(`DLA Awards API listening`, { port: PORT, env: process.env.NODE_ENV || 'development' });
 });
 
 module.exports = app;
