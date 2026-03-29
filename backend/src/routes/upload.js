@@ -6,6 +6,7 @@ const router   = express.Router();
 const db       = require('../db/connection');
 const logger   = require('../logger');
 const { ingestUploadedAwards } = require('../db/importers/awardsIngest');
+const { createHttpError } = require('../utils/http');
 
 // Store uploaded files in memory as a buffer (streaming immediately to DB).
 // For very large files the team may switch to disk storage via multer.diskStorage.
@@ -24,7 +25,7 @@ const upload = multer({
 // POST /api/upload
 router.post('/', upload.single('file'), async (req, res, next) => {
   if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded. Include a CSV as form-data field "file".' });
+    return next(createHttpError(400, 'No file uploaded. Include a CSV as form-data field "file".'));
   }
 
   logger.info('upload started', {

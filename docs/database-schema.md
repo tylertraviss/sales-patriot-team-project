@@ -76,7 +76,7 @@ That should become `award_transactions.award_key`.
 
 ### 3. Read model
 
-Views:
+Materialized views:
 
 - `vendor_year_metrics`
 - `vendor_investment_summary`
@@ -88,9 +88,9 @@ Purpose:
 - expose ranking and trend fields without asking the frontend to aggregate raw awards
 - provide a data layer for the REST and analytics routes documented in [API.md](/Users/antoniocoppe/code/sales-patriot-team-project/API.md)
 
-## Investment-oriented views
+## Investment-oriented summaries
 
-Views:
+Materialized views:
 
 - `vendor_year_metrics`
 - `vendor_investment_summary`
@@ -123,7 +123,8 @@ Recommended flow:
 3. Upsert `vendor_entities` from the raw payload.
 4. Upsert `naics_codes` and `product_service_codes`.
 5. Upsert `award_transactions`.
-6. Query `vendor_investment_summary` or `cage_code_investment_summary` for company rankings.
+6. Refresh the analytics materialized views.
+7. Query `vendor_investment_summary` or `cage_code_investment_summary` for company rankings.
 
 Why:
 
@@ -141,6 +142,7 @@ Available import commands from `backend/`:
 
 - [API.md](/Users/antoniocoppe/code/sales-patriot-team-project/API.md) is the route contract source of truth.
 - Backend can query `vendor_investment_summary` or `cage_code_investment_summary` for rankings and investor-facing analytics.
+- Uploads and disk imports refresh the analytics materialized views after ingest so cached summaries stay aligned with the source tables.
 - The schema is designed to support the vendor, award, agency, NAICS, and analytics route families without carrying a separate demo storage model.
 
 ## Drizzle setup
@@ -161,4 +163,4 @@ Important constraint:
 - [backend/src/db/schema.sql](/Users/antoniocoppe/code/sales-patriot-team-project/backend/src/db/schema.sql) remains the DDL source of truth right now.
 - [API.md](/Users/antoniocoppe/code/sales-patriot-team-project/API.md) remains the API contract source of truth.
 - The Drizzle schema mirrors the main tables for query-builder use and Studio access.
-- We are not using Drizzle-generated migrations as the canonical setup path yet, because the database also includes hand-authored SQL objects such as triggers and analytics views.
+- We are not using Drizzle-generated migrations as the canonical setup path yet, because the database also includes hand-authored SQL objects such as triggers and analytics materialized views.

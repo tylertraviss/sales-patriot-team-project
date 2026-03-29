@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
 const db = require('../connection');
+const { refreshAnalyticsCaches } = require('../analyticsCache');
 const logger = require('../../logger');
 const {
   beginIngestFile,
@@ -257,6 +258,10 @@ async function main() {
       ),
     );
   }
+
+  await withClient(async (client) => {
+    await refreshAnalyticsCaches(client);
+  });
 
   console.log(
     JSON.stringify(

@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { refreshAnalyticsCaches } = require('../analyticsCache');
 
 const EMPTY_STRING_VALUES = new Set(['', 'null', 'NULL', 'undefined', 'UNDEFINED']);
 
@@ -897,6 +898,8 @@ async function ingestUploadedAwards(client, { fileName, filePath = null, fileSiz
     rowCount: rows.length,
     status: 'loaded',
   });
+
+  await refreshAnalyticsCaches(client);
 
   return state;
 }

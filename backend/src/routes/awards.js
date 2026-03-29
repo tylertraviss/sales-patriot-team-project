@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/connection');
 const logger = require('../logger');
+const { createHttpError } = require('../utils/http');
 
 const AWARD_HEADERS = [
   { key: 'cage_code', label: 'CAGE Code', type: 'string' },
@@ -174,7 +175,7 @@ router.get('/:cageCode', async (req, res, next) => {
 
     if (companyResult.rows.length === 0) {
       logger.warn('CAGE code not found', { requestId: req.id, cageCode: normalizedCageCode });
-      return res.status(404).json({ error: `CAGE code ${normalizedCageCode} not found` });
+      throw createHttpError(404, `CAGE code ${normalizedCageCode} not found`);
     }
 
     const total = Number.parseInt(countResult.rows[0].total, 10);

@@ -4,7 +4,7 @@
 -- 1. Make the ingest + analytics model the only source of truth.
 -- 2. Support the real 660-column CSV exports from local disk or API upload.
 -- 3. Make "which CAGE code should I invest in?" queries cheap by pre-shaping
---    vendor- and year-level views over the fact data.
+--    vendor- and year-level materialized views over the fact data.
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
@@ -253,10 +253,18 @@ CREATE INDEX IF NOT EXISTS idx_award_transactions_extra_attributes
   ON award_transactions USING GIN (extra_attributes jsonb_path_ops);
 
 -- ---------------------------------------------------------------------------
--- Analytics views
+-- Analytics cache
 -- ---------------------------------------------------------------------------
 
-CREATE OR REPLACE VIEW vendor_year_metrics AS
+DROP MATERIALIZED VIEW IF EXISTS cage_code_investment_summary;
+DROP MATERIALIZED VIEW IF EXISTS vendor_investment_summary;
+DROP MATERIALIZED VIEW IF EXISTS vendor_year_metrics;
+
+DROP VIEW IF EXISTS cage_code_investment_summary;
+DROP VIEW IF EXISTS vendor_investment_summary;
+DROP VIEW IF EXISTS vendor_year_metrics;
+
+CREATE MATERIALIZED VIEW vendor_year_metrics AS
 WITH base AS (
   SELECT
     a.*,
@@ -274,6 +282,7 @@ SELECT
   v.uei,
   v.vendor_name AS company_name,
   b.fiscal_year,
+  MAX(NOW()) AS cached_at,
   COUNT(*) AS award_count,
   COUNT(DISTINCT COALESCE(NULLIF(b.contract_id, ''), NULLIF(b.piid, ''), b.award_key)) AS contract_count,
   SUM(COALESCE(b.award_amount, 0)) AS obligated_amount,
@@ -291,7 +300,13 @@ GROUP BY
   v.vendor_name,
   b.fiscal_year;
 
-CREATE OR REPLACE VIEW vendor_investment_summary AS
+CREATE UNIQUE INDEX idx_vendor_year_metrics_vendor_year
+  ON vendor_year_metrics (vendor_id, fiscal_year);
+
+CREATE INDEX idx_vendor_year_metrics_cage_code
+  ON vendor_year_metrics (cage_code, fiscal_year DESC);
+
+CREATE MATERIALIZED VIEW vendor_investment_summary AS
 WITH yearly AS (
   SELECT * FROM vendor_year_metrics
 ),
@@ -324,6 +339,7 @@ SELECT
   v.cage_code,
   v.uei,
   v.vendor_name AS company_name,
+  ly.cached_at,
   l.first_award_date,
   l.last_award_date,
   l.award_count,
@@ -347,7 +363,16 @@ LEFT JOIN latest_year ly
   ON ly.vendor_id = v.vendor_id
  AND ly.rn = 1;
 
-CREATE OR REPLACE VIEW cage_code_investment_summary AS
+CREATE UNIQUE INDEX idx_vendor_investment_summary_vendor
+  ON vendor_investment_summary (vendor_id);
+
+CREATE INDEX idx_vendor_investment_summary_cage
+  ON vendor_investment_summary (cage_code);
+
+CREATE MATERIALIZED VIEW cage_code_investment_summary AS
 SELECT *
 FROM vendor_investment_summary
 WHERE cage_code IS NOT NULL AND BTRIM(cage_code) <> '';
+
+CREATE UNIQUE INDEX idx_cage_code_investment_summary_cage
+  ON cage_code_investment_summary (cage_code);

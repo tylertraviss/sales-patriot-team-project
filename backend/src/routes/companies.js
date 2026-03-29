@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/connection');
 const logger = require('../logger');
+const { createHttpError } = require('../utils/http');
 
 // GET /api/companies
 // Query params: search (name or cage_code), page, limit
@@ -99,7 +100,7 @@ router.get('/:cageCode', async (req, res, next) => {
 
     if (result.rows.length === 0) {
       logger.warn('company not found', { requestId: req.id, cageCode });
-      return res.status(404).json({ error: `Company with CAGE code ${cageCode} not found` });
+      throw createHttpError(404, `Company with CAGE code ${cageCode} not found`);
     }
 
     res.json(result.rows[0]);

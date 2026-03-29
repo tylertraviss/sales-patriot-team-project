@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import VendorsFilters from '@/components/VendorsFilters';
 import VendorsTable from '@/components/VendorsTable';
 import VendorsPagination from '@/components/VendorsPagination';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const DEFAULT_FILTERS = {
   search: '',
@@ -12,7 +13,7 @@ const DEFAULT_FILTERS = {
   setAsideType: '',
 };
 
-const DEFAULT_SORT = { sort: 'totalObligated', order: 'desc' };
+const DEFAULT_SORT = { sort: 'total_obligated', order: 'desc' };
 const DEFAULT_PAGE = { page: 1, limit: 25 };
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -53,18 +54,20 @@ export default function Vendors() {
       params.set('order', sort.order);
       if (filters.year) params.set('year', filters.year);
       if (debouncedSearch) params.set('search', debouncedSearch);
-      if (filters.stateCode) params.set('stateCode', filters.stateCode);
-      if (filters.naicsCode) params.set('naicsCode', filters.naicsCode);
-      if (filters.agencyCode) params.set('agencyCode', filters.agencyCode);
-      if (filters.setAsideType) params.set('setAsideType', filters.setAsideType);
+      if (filters.stateCode) params.set('state_code', filters.stateCode);
+      if (filters.naicsCode) params.set('naics_code', filters.naicsCode);
+      if (filters.agencyCode) params.set('agency_code', filters.agencyCode);
+      if (filters.setAsideType) params.set('set_aside_type', filters.setAsideType);
 
       const res = await fetch(`${BASE_URL}/vendors?${params.toString()}`);
-      if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`);
       const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.error?.message || `Server error: ${res.status} ${res.statusText}`);
+      }
       setData(json.data ?? []);
       setPaginationMeta(json.pagination ?? null);
     } catch (err) {
-      setError(err.message);
+      setError(getApiErrorMessage(err, 'Failed to load vendors.'));
       setData([]);
       setPaginationMeta(null);
     } finally {
