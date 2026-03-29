@@ -102,8 +102,8 @@ export default function CompanyGraph() {
         <ForceGraph2D
           ref={graphRef}
           graphData={GRAPH_DATA}
-          width={700}
-          height={420}
+          width={1100}
+          height={620}
           backgroundColor="#f9fafb"
           nodeCanvasObject={paintNode}
           nodeCanvasObjectMode={() => 'replace'}
