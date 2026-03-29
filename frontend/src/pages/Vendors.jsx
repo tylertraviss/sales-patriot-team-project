@@ -22,7 +22,7 @@ const DEFAULT_FILTERS = {
 const DEFAULT_SORT = { sort: 'vendor_name', order: 'asc' };
 const DEFAULT_PAGE = { page: 1, limit: 25 };
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 // Fetch ALL vendors (no pagination) for the globe — we need every pin
@@ -235,7 +235,7 @@ export default function Vendors() {
       {/* Vendor detail drawer — shared between both views */}
       <VendorDetailDrawer
         cageCode={selectedVendor?.cage_code}
-        vendorName={selectedVendor?.name}
+        vendorName={selectedVendor?.vendor_name ?? selectedVendor?.name}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
       />

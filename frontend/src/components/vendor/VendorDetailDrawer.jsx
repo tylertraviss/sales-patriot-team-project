@@ -54,7 +54,7 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
       // 1. Try the candidate directly
       if (candidate) {
         try {
-          const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+          const BASE = import.meta.env.VITE_API_URL || '/api';
           const res  = await fetch(`${BASE}/vendors/${candidate}`);
           if (res.ok) return candidate; // it's a valid cage_code
         } catch { /* fall through */ }
@@ -62,7 +62,7 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
       // 2. Fall back to name search
       if (name) {
         try {
-          const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+          const BASE = import.meta.env.VITE_API_URL || '/api';
           const res  = await fetch(`${BASE}/vendors?search=${encodeURIComponent(name)}&limit=5`);
           if (res.ok) {
             const json  = await res.json();

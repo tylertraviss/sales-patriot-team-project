@@ -4,15 +4,16 @@ import {
   mockGetVendorAwards,
 } from './mockApi';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 async function apiFetch(path, params = {}) {
-  const url = new URL(`${BASE_URL}${path}`);
+  const qs = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
+    if (v !== undefined && v !== null && v !== '') qs.set(k, v);
   });
-  const res = await fetch(url.toString());
+  const url = `${BASE_URL}${path}${qs.toString() ? '?' + qs.toString() : ''}`;
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
 }

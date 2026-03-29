@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 const NaicsGraph = lazy(() => import('@/components/NaicsGraph'));
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const PAGES               = 5;   // pages × 100 awards for NAICS graph
 const TOP_SECTORS         = 8;
@@ -213,7 +213,7 @@ export default function Graph() {
     try {
       const pages = await Promise.all(
         Array.from({ length: PAGES }, (_, i) =>
-          fetch(`${BASE_URL}/awards?page=${i + 1}&limit=100&sort=dollars_obligated&order=desc`)
+          fetch(`${BASE_URL}/awards?page=${i + 1}&limit=100&sortBy=award_amount&sortDir=DESC`)
             .then((r) => { if (!r.ok) throw new Error(`${r.status}`); return r.json(); })
         )
       );

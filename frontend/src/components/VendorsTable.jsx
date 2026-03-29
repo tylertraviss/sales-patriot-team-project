@@ -74,7 +74,7 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
 
   const allColumns = [
     ...COLUMNS,
-    ...extraKeys.map((k) => ({ key: k, label: keyToLabel(k), sortable: false, type: 'string', width: '' })),
+    ...extraKeys.map((k) => ({ key: k, label: keyToLabel(k), sortable: false, type: 'string', width: 'min-w-[120px]' })),
   ];
 
   // Detect which known columns are actually present in the data
@@ -86,7 +86,7 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
 
   return (
     <div className="rounded-lg border bg-card overflow-hidden">
-      <Table>
+      <Table className="[&_th:last-child]:pr-6 [&_td:last-child]:pr-6">
         <TableHeader>
           <TableRow className="bg-muted/40 hover:bg-muted/40">
             {displayColumns.map((col) => (
@@ -155,8 +155,6 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
           {!loading && !error && data.map((row, idx) => (
             <TableRow
               key={row.uei ?? idx}
-              className={cn(onRowClick && 'cursor-pointer hover:bg-accent/60')}
-              onClick={() => onRowClick?.(row)}
             >
               {displayColumns.map((col) => (
                 <TableCell
