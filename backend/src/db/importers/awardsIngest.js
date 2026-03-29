@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { refreshAnalyticsCaches } = require('../analyticsCache');
+const logger = require('../../logger');
 
 const FORCE_ROW_BY_ROW_IMPORT = ['1', 'true', 'yes', 'on']
   .includes(String(process.env.IMPORT_FORCE_ROW_BY_ROW || '').trim().toLowerCase());
@@ -543,13 +544,7 @@ matched_vendor_rows AS (
 ),
 updated_vendors AS (
   UPDATE vendor_entities ve
-     SET vendor_key = CASE
-           WHEN ve.cage_code IS NULL AND mvr.cage_code IS NOT NULL THEN mvr.input_vendor_key
-           ELSE ve.vendor_key
-         END,
-         cage_code = COALESCE(mvr.cage_code, ve.cage_code),
-         uei = COALESCE(mvr.uei, ve.uei),
-         vendor_name = COALESCE(NULLIF(mvr.vendor_name, ''), ve.vendor_name),
+     SET vendor_name = COALESCE(NULLIF(mvr.vendor_name, ''), ve.vendor_name),
          business_type_description = COALESCE(NULLIF(mvr.business_type_description, ''), ve.business_type_description),
          socio_economic_indicator = COALESCE(NULLIF(mvr.socio_economic_indicator, ''), ve.socio_economic_indicator),
          parent_company_name = COALESCE(NULLIF(mvr.parent_company_name, ''), ve.parent_company_name),
@@ -1544,6 +1539,13 @@ async function ingestAwardRows(client, state, { ingestFileId, rows, startRowNumb
   } catch (error) {
     await client.query('ROLLBACK TO SAVEPOINT ingest_batch_fast_path');
     await client.query('RELEASE SAVEPOINT ingest_batch_fast_path');
+
+    logger.warn('bulk ingest batch failed; falling back to row-by-row import', {
+      ingestFileId,
+      startRowNumber,
+      rowCount: rows.length,
+      error: error.message,
+    });
 
     await ingestAwardRowsRowByRow(client, state, {
       ingestFileId,
