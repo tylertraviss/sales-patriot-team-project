@@ -7,6 +7,7 @@ const requestLogger   = require('./middleware/requestLogger');
 const awardsRouter    = require('./routes/awards');
 const uploadRouter    = require('./routes/upload');
 const companiesRouter = require('./routes/companies');
+const dashboardRouter = require('./routes/dashboard');
 const errorHandler    = require('./middleware/errorHandler');
 
 const app  = express();
@@ -36,9 +37,10 @@ app.get('/health', (_req, res) => {
 // ---------------------------------------------------------------------------
 // API routes
 // ---------------------------------------------------------------------------
-app.use('/api/awards',    awardsRouter);
-app.use('/api/upload',    uploadRouter);
-app.use('/api/companies', companiesRouter);
+app.use('/api/awards',     awardsRouter);
+app.use('/api/upload',     uploadRouter);
+app.use('/api/companies',  companiesRouter);
+app.use('/api/dashboard',  dashboardRouter);
 
 // ---------------------------------------------------------------------------
 // 404 handler

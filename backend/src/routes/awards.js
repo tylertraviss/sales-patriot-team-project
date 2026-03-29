@@ -3,74 +3,86 @@ const router  = express.Router();
 const db      = require('../db/connection');
 const logger  = require('../logger');
 
-/**
- * Column definitions returned to the frontend so it can render
- * the awards table dynamically without hard-coding field names.
- */
 const AWARD_HEADERS = [
-  { key: 'cage_code',       label: 'CAGE Code',        type: 'string'   },
-  { key: 'company_name',    label: 'Company Name',     type: 'string'   },
-  { key: 'contract_number', label: 'Contract Number',  type: 'string'   },
-  { key: 'award_amount',    label: 'Award Amount',     type: 'currency' },
-  { key: 'award_date',      label: 'Award Date',       type: 'date'     },
-  { key: 'dla_office',      label: 'DLA Office',       type: 'string'   },
-  { key: 'description',     label: 'Description',      type: 'text'     },
+  { key: 'vendor_name',      label: 'Vendor Name',      type: 'string'   },
+  { key: 'cage_code',        label: 'CAGE Code',        type: 'string'   },
+  { key: 'piid',             label: 'Contract (PIID)',  type: 'string'   },
+  { key: 'award_amount',     label: 'Award Amount',     type: 'currency' },
+  { key: 'award_date',       label: 'Award Date',       type: 'date'     },
+  { key: 'award_type_description', label: 'Award Type', type: 'string'   },
+  { key: 'naics_code',       label: 'NAICS',            type: 'string'   },
+  { key: 'place_of_performance_state_code', label: 'State', type: 'string' },
+  { key: 'contracting_agency_name', label: 'Agency',   type: 'string'   },
+  { key: 'extent_competed_name', label: 'Competition', type: 'string'   },
 ];
 
 // GET /api/awards/headers
-// Must be registered BEFORE /:cageCode to avoid route shadowing.
 router.get('/headers', (req, res) => {
   logger.debug('headers requested', { requestId: req.id });
   res.json({ headers: AWARD_HEADERS });
 });
 
 // GET /api/awards
-// Query params: cageCode, page, limit, sortBy, sortDir
 router.get('/', async (req, res, next) => {
   try {
     const {
-      cageCode,
       page    = '1',
       limit   = '50',
       sortBy  = 'award_date',
       sortDir = 'DESC',
+      year,
+      agencyCode,
+      naicsCode,
+      stateCode,
+      awardType,
+      extentCompeted,
+      search,
     } = req.query;
 
     const pageNum  = Math.max(1, parseInt(page, 10));
     const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10)));
     const offset   = (pageNum - 1) * limitNum;
 
-    // Whitelist sortable columns to prevent SQL injection
     const allowedSortCols = new Set([
-      'award_date', 'award_amount', 'cage_code', 'company_name',
-      'contract_number', 'dla_office',
+      'award_date', 'award_amount', 'vendor_name', 'naics_code',
+      'place_of_performance_state_code', 'award_type_description',
     ]);
-    const col = allowedSortCols.has(sortBy) ? sortBy : 'award_date';
+    const col = allowedSortCols.has(sortBy) ? `at.${sortBy}` : 'at.award_date';
     const dir = sortDir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
+    const values = [];
     const conditions = [];
-    const values     = [];
 
-    if (cageCode) {
-      values.push(cageCode);
-      conditions.push(`a.cage_code = $${values.length}`);
-    }
+    if (year)          conditions.push(`at.award_fiscal_year = $${values.push(parseInt(year))}`);
+    if (agencyCode)    conditions.push(`at.contracting_agency_code = $${values.push(agencyCode)}`);
+    if (naicsCode)     conditions.push(`at.naics_code = $${values.push(naicsCode)}`);
+    if (stateCode)     conditions.push(`at.place_of_performance_state_code = $${values.push(stateCode)}`);
+    if (awardType)     conditions.push(`at.award_type_description = $${values.push(awardType)}`);
+    if (extentCompeted) conditions.push(`at.extent_competed_code = $${values.push(extentCompeted)}`);
+    if (search)        conditions.push(`at.description_of_requirement ILIKE $${values.push('%' + search + '%')}`);
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const dataQuery = `
       SELECT
-        a.id,
-        a.cage_code,
-        c.company_name,
-        a.contract_number,
-        a.award_amount,
-        a.award_date,
-        a.dla_office,
-        a.description,
-        a.created_at
-      FROM awards a
-      JOIN companies c ON c.cage_code = a.cage_code
+        at.award_tx_id,
+        ve.vendor_name,
+        ve.cage_code,
+        ve.uei,
+        at.piid,
+        at.award_amount,
+        at.award_date,
+        at.award_type_description,
+        at.naics_code,
+        at.naics_description,
+        at.place_of_performance_state_code,
+        at.place_of_performance_city,
+        at.contracting_agency_name,
+        at.extent_competed_name,
+        at.description_of_requirement,
+        at.award_fiscal_year
+      FROM award_transactions at
+      JOIN vendor_entities ve ON ve.vendor_id = at.vendor_id
       ${where}
       ORDER BY ${col} ${dir}
       LIMIT $${values.length + 1}
@@ -79,8 +91,8 @@ router.get('/', async (req, res, next) => {
 
     const countQuery = `
       SELECT COUNT(*) AS total
-      FROM awards a
-      JOIN companies c ON c.cage_code = a.cage_code
+      FROM award_transactions at
+      JOIN vendor_entities ve ON ve.vendor_id = at.vendor_id
       ${where}
     `;
 
@@ -91,85 +103,11 @@ router.get('/', async (req, res, next) => {
 
     const total = parseInt(countResult.rows[0].total, 10);
 
-    logger.info('awards list served', {
-      requestId: req.id,
-      total,
-      page: pageNum,
-      limit: limitNum,
-      cageCode: cageCode || null,
-    });
+    logger.info('awards list served', { requestId: req.id, total, page: pageNum });
 
     res.json({
-      data:       dataResult.rows,
-      pagination: {
-        total,
-        page:       pageNum,
-        limit:      limitNum,
-        totalPages: Math.ceil(total / limitNum),
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// GET /api/awards/:cageCode
-router.get('/:cageCode', async (req, res, next) => {
-  try {
-    const { cageCode } = req.params;
-    const {
-      page    = '1',
-      limit   = '50',
-      sortBy  = 'award_date',
-      sortDir = 'DESC',
-    } = req.query;
-
-    const pageNum  = Math.max(1, parseInt(page, 10));
-    const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10)));
-    const offset   = (pageNum - 1) * limitNum;
-
-    const allowedSortCols = new Set([
-      'award_date', 'award_amount', 'contract_number', 'dla_office',
-    ]);
-    const col = allowedSortCols.has(sortBy) ? sortBy : 'award_date';
-    const dir = sortDir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-
-    const [dataResult, countResult, companyResult] = await Promise.all([
-      db.query(
-        `SELECT a.*, c.company_name
-         FROM awards a
-         JOIN companies c ON c.cage_code = a.cage_code
-         WHERE a.cage_code = $1
-         ORDER BY ${col} ${dir}
-         LIMIT $2 OFFSET $3`,
-        [cageCode, limitNum, offset],
-      ),
-      db.query(
-        'SELECT COUNT(*) AS total FROM awards WHERE cage_code = $1',
-        [cageCode],
-      ),
-      db.query(
-        'SELECT * FROM companies WHERE cage_code = $1',
-        [cageCode],
-      ),
-    ]);
-
-    if (companyResult.rows.length === 0) {
-      logger.warn('CAGE code not found', { requestId: req.id, cageCode });
-      return res.status(404).json({ error: `CAGE code ${cageCode} not found` });
-    }
-
-    const total = parseInt(countResult.rows[0].total, 10);
-
-    res.json({
-      company:    companyResult.rows[0],
-      data:       dataResult.rows,
-      pagination: {
-        total,
-        page:       pageNum,
-        limit:      limitNum,
-        totalPages: Math.ceil(total / limitNum),
-      },
+      data: dataResult.rows,
+      pagination: { total, page: pageNum, limit: limitNum, totalPages: Math.ceil(total / limitNum) },
     });
   } catch (err) {
     next(err);
