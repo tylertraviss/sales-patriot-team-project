@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import AwardsTable from '../components/AwardsTable';
 import CompanySearch from '../components/CompanySearch';
+import TopEarners from '../components/TopEarners';
 
 export default function Dashboard() {
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -30,6 +31,9 @@ export default function Dashboard() {
           </p>
         )}
       </div>
+
+      {/* Top earners insight card */}
+      <TopEarners />
 
       {/* Awards table */}
       <AwardsTable cageCode={selectedCompany?.cage_code ?? null} />
