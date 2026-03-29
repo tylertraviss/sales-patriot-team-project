@@ -145,6 +145,14 @@ Every paginated endpoint returns:
 
 ---
 
+## Database & Schema
+
+Database design notes for the real CSV exports are in [docs/database-schema.md](./docs/database-schema.md).
+
+Backend Drizzle setup lives in `backend/drizzle.config.mjs` with runtime schema/client files under `backend/src/db/drizzle/`.
+
+---
+
 ## Team
 
 - **Backend team** — server, API routes, data ingestion, DB schema
