@@ -169,33 +169,8 @@ const awardTransactions = pgTable('award_transactions', {
   createdAt: timestamptz('created_at').notNull().defaultNow(),
 });
 
-const companies = pgTable('companies', {
-  cageCode: varchar('cage_code', { length: 10 }).primaryKey(),
-  companyName: varchar('company_name', { length: 500 }).notNull(),
-  vendorId: uuid('vendor_id').references(() => vendorEntities.vendorId, { onDelete: 'set null' }),
-  uei: varchar('uei', { length: 20 }),
-  createdAt: timestamptz('created_at').notNull().defaultNow(),
-  updatedAt: timestamptz('updated_at').notNull().defaultNow(),
-});
-
-const awards = pgTable('awards', {
-  id: uuid('id').primaryKey().default(uuidDefault()),
-  awardTxId: uuid('award_tx_id').references(() => awardTransactions.awardTxId, { onDelete: 'set null' }),
-  cageCode: varchar('cage_code', { length: 10 })
-    .notNull()
-    .references(() => companies.cageCode, { onDelete: 'cascade' }),
-  awardAmount: numeric('award_amount', { precision: 18, scale: 2 }),
-  awardDate: date('award_date'),
-  contractNumber: varchar('contract_number', { length: 100 }),
-  description: text('description'),
-  dlaOffice: varchar('dla_office', { length: 200 }),
-  createdAt: timestamptz('created_at').notNull().defaultNow(),
-});
-
 module.exports = {
-  awards,
   awardTransactions,
-  companies,
   ingestFiles,
   naicsCodes,
   productServiceCodes,

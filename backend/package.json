@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "db:init": "psql $DATABASE_URL -f src/db/schema.sql",
+    "db:import": "node src/db/scripts/importAwardsCsv.js",
     "db:studio": "drizzle-kit studio --config=drizzle.config.mjs",
     "db:pull": "drizzle-kit pull --config=drizzle.config.mjs"
   },

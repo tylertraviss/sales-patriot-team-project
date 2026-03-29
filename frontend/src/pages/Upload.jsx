@@ -9,7 +9,7 @@ export default function Upload() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Upload Awards Data</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Upload a CSV export from DLA. Rows are streamed directly into PostgreSQL.
+          Upload a DLA awards CSV. The backend loads the raw rows, vendor dimension, and award fact table in one pass.
         </p>
       </div>
 
@@ -17,11 +17,10 @@ export default function Upload() {
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <p className="font-semibold mb-1">Expected CSV columns</p>
         <code className="text-xs block">
-          CAGE Code, Company Name, Contract Number, Award Amount, Award Date, DLA Office, Description
+          FPDS / DLA award export columns, including vendor, award, agency, NAICS, and place-of-performance fields
         </code>
         <p className="mt-2 text-xs text-amber-700">
-          Column names are flexible — the backend also accepts snake_case variants.
-          Rows without a CAGE Code will be skipped.
+          Column names are flexible. The backend maps the wide export into raw ingest rows plus canonical vendor and award tables.
         </p>
       </div>
 
