@@ -1,0 +1,69 @@
+version: '3.9'
+
+services:
+
+  # -------------------------------------------------------------------------
+  # PostgreSQL — primary datastore
+  # -------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       dla_awards
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Auto-run schema on first boot
+      - ./backend/src/db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d dla_awards']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------------------------
+  # Backend — Express API
+  # -------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV:    production
+      PORT:        4000
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     dla_awards
+      DB_USER:     postgres
+      DB_PASSWORD: postgres
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - '4000:4000'
+    volumes:
+      # Allow hot-reloading uploads without rebuilding the image
+      - ./backend/src:/app/src:ro
+
+  # -------------------------------------------------------------------------
+  # Frontend — Vite dev server (development only)
+  # -------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:4000/api
+    ports:
+      - '5173:5173'
+
+volumes:
+  postgres_data:
