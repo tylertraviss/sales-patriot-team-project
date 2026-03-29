@@ -56,7 +56,7 @@ function SkeletonRows({ count, cols }) {
   ));
 }
 
-export default function VendorsTable({ data, loading, error, sort, onSort, onRetry, limit }) {
+export default function VendorsTable({ data, loading, error, sort, onSort, onRetry, limit, onRowClick }) {
   // Determine visible columns: always show COLUMNS, but also render any
   // extra keys found in the first row that aren't in our known set.
   const extraKeys = data.length
@@ -144,7 +144,11 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
 
           {/* Data rows */}
           {!loading && !error && data.map((row, idx) => (
-            <TableRow key={row.uei ?? idx}>
+            <TableRow
+              key={row.uei ?? idx}
+              className={cn(onRowClick && 'cursor-pointer hover:bg-accent/60')}
+              onClick={() => onRowClick?.(row)}
+            >
               {displayColumns.map((col) => (
                 <TableCell
                   key={col.key}

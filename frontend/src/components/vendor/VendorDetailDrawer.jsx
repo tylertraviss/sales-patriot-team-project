@@ -1,0 +1,169 @@
+import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import VendorProfile from './VendorProfile';
+import VendorSpendChart from './VendorSpendChart';
+import VendorAgencyChart from './VendorAgencyChart';
+import VendorCompetitionChart from './VendorCompetitionChart';
+import VendorAwardsTable from './VendorAwardsTable';
+import { getVendor, getVendorSummary } from '@/services/vendors';
+
+const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+
+function Section({ title, children }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function StatCard({ label, value, sub }) {
+  return (
+    <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-0.5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-lg font-bold tabular-nums leading-tight">{value}</p>
+      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+export default function VendorDetailDrawer({ uei, vendorName, open, onOpenChange }) {
+  const [vendor, setVendor] = useState(null);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!open || !uei) return;
+    setVendor(null);
+    setSummary(null);
+    setError(null);
+    setLoading(true);
+
+    Promise.allSettled([getVendor(uei), getVendorSummary(uei)]).then(([vRes, sRes]) => {
+      if (vRes.status === 'fulfilled') setVendor(vRes.value);
+      if (sRes.status === 'fulfilled') setSummary(sRes.value);
+      if (vRes.status === 'rejected' && sRes.status === 'rejected') {
+        setError('Failed to load vendor data.');
+      }
+      setLoading(false);
+    });
+  }, [open, uei]);
+
+  // Helper: extract array from various summary shapes
+  function extract(key, ...fallbacks) {
+    if (!summary) return [];
+    for (const k of [key, ...fallbacks]) {
+      if (Array.isArray(summary[k]) && summary[k].length) return summary[k];
+    }
+    return [];
+  }
+
+  const spendByYear   = extract('byYear', 'spendByYear', 'yearlySpend', 'byFiscalYear');
+  const byAgency      = extract('byAgency', 'agencyBreakdown', 'agencies');
+  const byCompetition = extract('byCompetition', 'competitionBreakdown', 'extentCompeted');
+
+  const totalObligated = vendor?.totalObligated ?? summary?.totalObligated ?? null;
+  const awardCount     = vendor?.awardCount ?? summary?.awardCount ?? summary?.totalAwards ?? null;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto flex flex-col gap-6 pt-10">
+
+        {/* Header */}
+        <SheetHeader className="space-y-1 pr-6">
+          <SheetTitle className="text-xl leading-tight">
+            {vendorName ?? vendor?.vendorName ?? uei}
+          </SheetTitle>
+          <SheetDescription className="flex items-center gap-2 flex-wrap">
+            {uei && <Badge variant="outline" className="font-mono text-xs">{uei}</Badge>}
+            {vendor?.cageCode && <Badge variant="outline" className="font-mono text-xs">CAGE: {vendor.cageCode}</Badge>}
+            {vendor?.stateCode && <span className="text-xs">{vendor.stateCode}</span>}
+          </SheetDescription>
+        </SheetHeader>
+
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {!loading && error && (
+          <p className="text-sm text-destructive text-center py-8">{error}</p>
+        )}
+
+        {!loading && !error && (
+          <>
+            {/* KPI row */}
+            {(totalObligated !== null || awardCount !== null) && (
+              <div className="grid grid-cols-2 gap-3">
+                {totalObligated !== null && (
+                  <StatCard label="Total Obligated" value={fmt.format(Number(totalObligated))} />
+                )}
+                {awardCount !== null && (
+                  <StatCard label="Total Awards" value={Number(awardCount).toLocaleString()} />
+                )}
+              </div>
+            )}
+
+            {/* Identity + certifications */}
+            {vendor && (
+              <>
+                <Separator />
+                <Section title="Vendor Profile">
+                  <VendorProfile vendor={vendor} />
+                </Section>
+              </>
+            )}
+
+            {/* Spend over time */}
+            {spendByYear.length > 0 && (
+              <>
+                <Separator />
+                <Section title="Spend by Fiscal Year">
+                  <VendorSpendChart data={spendByYear} />
+                </Section>
+              </>
+            )}
+
+            {/* Agency breakdown */}
+            {byAgency.length > 0 && (
+              <>
+                <Separator />
+                <Section title="Top Agencies">
+                  <VendorAgencyChart data={byAgency} />
+                </Section>
+              </>
+            )}
+
+            {/* Competition breakdown */}
+            {byCompetition.length > 0 && (
+              <>
+                <Separator />
+                <Section title="Competition Rate">
+                  <VendorCompetitionChart data={byCompetition} />
+                </Section>
+              </>
+            )}
+
+            {/* Individual awards */}
+            <Separator />
+            <Section title="Contract Awards">
+              <VendorAwardsTable uei={uei} />
+            </Section>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+}

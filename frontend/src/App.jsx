@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import Dashboard from './pages/Dashboard';
-import Upload from './pages/Upload';
 import Vendors from './pages/Vendors';
+import logo from './assets/salespatriot_logo.jpeg';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
-  { id: 'vendors',   label: 'Vendors' },
-  { id: 'upload',    label: 'Upload Data' },
+  { id: 'vendors',   label: 'Vendors'   },
 ];
 
 export default function App() {
@@ -17,9 +16,7 @@ export default function App() {
       {/* Top nav */}
       <nav className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-6 h-14">
-          <span className="text-base font-bold text-blue-700 tracking-tight whitespace-nowrap">
-            Sales Patriot
-          </span>
+          <img src={logo} alt="Sales Patriot" className="h-8 w-auto object-contain" />
           <div className="flex gap-1">
             {NAV_ITEMS.map((item) => (
               <button
@@ -43,7 +40,6 @@ export default function App() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activePage === 'dashboard' && <Dashboard />}
         {activePage === 'vendors'   && <Vendors />}
-        {activePage === 'upload'    && <Upload />}
       </main>
     </div>
   );
