@@ -3,6 +3,7 @@ import Dashboard from './pages/Dashboard';
 import Vendors from './pages/Vendors';
 import Graph from './pages/Graph';
 import Analytics from './pages/Analytics';
+import Agent from './pages/Agent';
 import logo from './assets/salespatriot_logo.jpeg';
 
 const NAV_ITEMS = [
@@ -10,6 +11,7 @@ const NAV_ITEMS = [
   { id: 'vendors',   label: 'Vendors'   },
   { id: 'graph',     label: 'Sector Graph' },
   { id: 'analytics', label: 'SalesPatriot Opportunities' },
+  { id: 'agent',     label: 'Agent'     },
 ];
 
 export default function App() {
@@ -46,6 +48,7 @@ export default function App() {
         {activePage === 'vendors'   && <Vendors />}
         {activePage === 'graph'     && <Graph />}
         {activePage === 'analytics' && <Analytics />}
+        {activePage === 'agent'     && <Agent />}
       </main>
     </div>
   );
