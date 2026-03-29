@@ -33,12 +33,14 @@ function Message({ role, content, streaming }) {
 }
 
 export default function Agent() {
-  const [messages,   setMessages]   = useState([]);
-  const [input,      setInput]      = useState('');
-  const [streaming,  setStreaming]  = useState(false);
-  const bottomRef  = useRef(null);
-  const inputRef   = useRef(null);
-  const abortRef   = useRef(null);
+  const [messages,     setMessages]     = useState([]);
+  const [input,        setInput]        = useState('');
+  const [streaming,    setStreaming]    = useState(false);
+  const [suggestions,  setSuggestions]  = useState([]);
+  const bottomRef      = useRef(null);
+  const inputRef       = useRef(null);
+  const abortRef       = useRef(null);
+  const assistantRef   = useRef('');
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,7 +55,9 @@ export default function Agent() {
     setMessages(history);
     setInput('');
     setStreaming(true);
+    setSuggestions([]);
 
+    assistantRef.current = '';
     // Add empty assistant message to stream into
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
 
@@ -90,6 +94,7 @@ export default function Agent() {
             const chunk = JSON.parse(raw);
             const delta = chunk.choices?.[0]?.delta?.content;
             if (delta) {
+              assistantRef.current += delta;
               setMessages((prev) => {
                 const next = [...prev];
                 next[next.length - 1] = {
@@ -118,6 +123,31 @@ export default function Agent() {
     } finally {
       setStreaming(false);
       inputRef.current?.focus();
+      console.log('[suggestions] assistantRef.current length:', assistantRef.current.length);
+      if (assistantRef.current) {
+        fetchSuggestions([
+          ...history,
+          { role: 'assistant', content: assistantRef.current },
+        ]);
+      }
+    }
+  }
+
+  async function fetchSuggestions(conversationHistory) {
+    try {
+      console.log('[suggestions] fetching for', conversationHistory.length, 'messages');
+      const res = await fetch(`${BASE_URL}/agent/suggestions`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ messages: conversationHistory }),
+      });
+      console.log('[suggestions] status', res.status);
+      if (!res.ok) return;
+      const data = await res.json();
+      console.log('[suggestions] data', data);
+      if (Array.isArray(data.suggestions)) setSuggestions(data.suggestions);
+    } catch (err) {
+      console.error('[suggestions] error', err);
     }
   }
 
@@ -154,19 +184,21 @@ export default function Agent() {
                 Ask about vendor trends, agency spend, NAICS sectors, or how to position for an opportunity.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
+            <div className="grid grid-cols-2 gap-2 w-full max-w-lg">
               {[
-                'What makes a vendor a good BD target?',
-                'How do I read a vendor\'s contract history?',
-                'Explain sole source vs full and open competition',
-                'What is a CAGE code and why does it matter?',
-              ].map((prompt) => (
+                { label: '🎯 Find leads',            prompt: 'Who are the top vendors I should be targeting right now based on spend trends?' },
+                { label: '📈 Spot growth signals',   prompt: 'Which vendors are showing the strongest year-over-year growth in this dataset?' },
+                { label: '🏛️ Agency breakdown',      prompt: 'Which agencies are spending the most and what sectors are they buying in?' },
+                { label: '⚡ Sole source opps',      prompt: 'Which vendors are winning the most sole source awards and why does that matter for BD?' },
+                { label: '🔍 Competitive landscape', prompt: 'Who are the dominant players by NAICS sector and how concentrated is competition?' },
+                { label: '📊 Market sizing',         prompt: 'Give me a high-level market overview — total spend, top sectors, and where the money is moving.' },
+              ].map(({ label, prompt }) => (
                 <button
-                  key={prompt}
+                  key={label}
                   onClick={() => { setInput(prompt); inputRef.current?.focus(); }}
                   className="text-left text-xs text-gray-600 bg-white border border-gray-200 rounded-lg px-3 py-2.5 hover:border-blue-300 hover:text-blue-700 transition-colors"
                 >
-                  {prompt}
+                  {label}
                 </button>
               ))}
             </div>
@@ -183,6 +215,21 @@ export default function Agent() {
         ))}
         <div ref={bottomRef} />
       </div>
+
+      {/* Follow-up suggestions */}
+      {suggestions.length > 0 && !streaming && (
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {suggestions.map((s) => (
+            <button
+              key={s}
+              onClick={() => { setInput(s); inputRef.current?.focus(); }}
+              className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded-full px-3 py-1.5 hover:bg-blue-100 transition-colors text-center truncate"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Input bar */}
       <div className="mt-3 flex gap-2 items-end">
