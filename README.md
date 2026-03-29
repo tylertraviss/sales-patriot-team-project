@@ -1,22 +1,64 @@
-# sales-patriot-team-project
+# Sales Patriot Team Project
 
-200 GB of data. One group in charge of backend, one group is in charge of front end.
+200 GB of DLA award data tracking revenue and contracts awarded to companies over time.
 
-It's data about revenue for companies through DLA.
+- **Backend** — server, API, data upload
+- **Frontend** — data display, file upload UI
 
-Backend is server/api/data upload
-Front end: data upload
+The backend sends column headers to the frontend so the frontend can render tables dynamically without hardcoded field names. CAGE code is the primary company identifier.
 
-for backend
+**Core question this app answers:** What companies should I invest in? Surface the top CAGE codes by award volume for a given year.
 
-send the front end the headers so they will figure out how to display it on front end.
+---
 
-data of awards to different companies in the past.
+## Getting Started
 
-CAGE code is company name 
+```bash
+# 1. Install dependencies
+cd backend && npm install
+cd ../frontend && npm install
 
-We want to know everything about this years rewards. what company should i invest in. top 3 cage codes i should invest in
+# 2. Set up environment
+cd ../backend && cp .env.example .env
 
+# 3. Start Postgres (via Docker)
+cd .. && docker compose up postgres -d
+
+# 4. Initialize the database schema
+cd backend && npm run db:init
+
+# 5. Start backend (new terminal)
+npm run dev
+
+# 6. Start frontend (new terminal)
+cd ../frontend && npm run dev
+```
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:4000
+
+---
+
+## Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Backend API | Node.js + Express |
+| Database | PostgreSQL |
+| Frontend | React + Vite + TypeScript |
+| UI Components | shadcn/ui + Tailwind CSS |
+| File Uploads | Multer (CSV streaming to DB) |
+| Logging | Winston |
+| CI | GitHub Actions |
+| Infrastructure | Docker Compose |
+
+---
+
+## API Reference
+
+### Vendors
+
+```
 GET /api/vendors
   ?page=1&limit=25
   ?sort=totalObligated&order=desc
@@ -25,7 +67,7 @@ GET /api/vendors
   ?stateCode=VA
   ?agencyCode=9700
   ?setAsideType=SBA
-  ?search=indyne          ← name search
+  ?search=indyne
 
 GET /api/vendors/:uei
 GET /api/vendors/:uei/awards
@@ -35,8 +77,12 @@ GET /api/vendors/:uei/awards
   ?agencyCode=9700
   ?awardType=DEFINITIVE+CONTRACT
 
-GET /api/vendors/:uei/awards/summary   ← aggregates only, no pagination needed
+GET /api/vendors/:uei/awards/summary
+```
 
+### Awards
+
+```
 GET /api/awards
   ?page=1&limit=25
   ?sort=dollarsObligated&order=desc
@@ -46,8 +92,12 @@ GET /api/awards
   ?stateCode=CA
   ?awardType=DEFINITIVE+CONTRACT
   ?extentCompeted=D
-  ?search=communications   ← searches descriptionOfRequirement
+  ?search=communications
+```
 
+### Agencies
+
+```
 GET /api/agencies
   ?page=1&limit=25
   ?sort=name&order=asc
@@ -60,7 +110,11 @@ GET /api/agencies/:code/awards
 GET /api/agencies/:code/vendors
   ?page=1&limit=25
   ?sort=totalObligated&order=desc
+```
 
+### NAICS
+
+```
 GET /api/naics
   ?page=1&limit=25
   ?sort=totalObligated&order=desc
@@ -71,9 +125,13 @@ GET /api/naics/:code/awards
 
 GET /api/naics/:code/vendors
   ?page=1&limit=25
-Pagination response envelope — every paginated endpoint returns:
+```
 
+### Pagination Envelope
 
+Every paginated endpoint returns:
+
+```json
 {
   "data": [...],
   "pagination": {
@@ -83,3 +141,11 @@ Pagination response envelope — every paginated endpoint returns:
     "totalPages": 3369
   }
 }
+```
+
+---
+
+## Team
+
+- **Backend team** — server, API routes, data ingestion, DB schema
+- **Frontend team** — display, upload UI, consumes headers from `/api/awards/headers`
