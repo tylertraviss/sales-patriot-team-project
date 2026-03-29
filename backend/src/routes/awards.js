@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db/connection');
+const logger  = require('../logger');
 
 const ALLOWED_SORT = new Set([
   'award_date', 'award_amount', 'vendor_name', 'naics_code',
@@ -28,6 +29,7 @@ function paginate(page, limit) {
 
 // GET /api/awards/headers
 router.get('/headers', (req, res) => {
+  logger.debug('headers requested', { requestId: req.id });
   res.json({ headers: AWARD_HEADERS });
 });
 
@@ -55,14 +57,14 @@ router.get('/', async (req, res, next) => {
     const values     = [];
     const conditions = [];
 
-    if (year)          conditions.push(`at.award_fiscal_year = $${values.push(parseInt(year, 10))}`);
-    if (agencyCode)    conditions.push(`at.contracting_agency_code = $${values.push(agencyCode)}`);
-    if (naicsCode)     conditions.push(`at.naics_code = $${values.push(naicsCode)}`);
-    if (stateCode)     conditions.push(`at.place_of_performance_state_code = $${values.push(stateCode.toUpperCase())}`);
-    if (awardType)     conditions.push(`at.award_type_description ILIKE $${values.push(awardType)}`);
-    if (setAsideCode)  conditions.push(`at.set_aside_code = $${values.push(setAsideCode)}`);
+    if (year)           conditions.push(`at.award_fiscal_year = $${values.push(parseInt(year, 10))}`);
+    if (agencyCode)     conditions.push(`at.contracting_agency_code = $${values.push(agencyCode)}`);
+    if (naicsCode)      conditions.push(`at.naics_code = $${values.push(naicsCode)}`);
+    if (stateCode)      conditions.push(`at.place_of_performance_state_code = $${values.push(stateCode.toUpperCase())}`);
+    if (awardType)      conditions.push(`at.award_type_description ILIKE $${values.push(awardType)}`);
+    if (setAsideCode)   conditions.push(`at.set_aside_code = $${values.push(setAsideCode)}`);
     if (extentCompeted) conditions.push(`at.extent_competed_code = $${values.push(extentCompeted)}`);
-    if (search)        conditions.push(`at.description_of_requirement ILIKE $${values.push('%' + search + '%')}`);
+    if (search)         conditions.push(`at.description_of_requirement ILIKE $${values.push('%' + search + '%')}`);
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -106,13 +108,12 @@ router.get('/', async (req, res, next) => {
       `, values),
     ]);
 
+    const total = parseInt(countResult.rows[0].total, 10);
+    logger.info('awards list served', { requestId: req.id, total, page: p });
+
     res.json({
       data: dataResult.rows,
-      pagination: {
-        page: p, limit: l,
-        total: parseInt(countResult.rows[0].total, 10),
-        totalPages: Math.ceil(countResult.rows[0].total / l),
-      },
+      pagination: { page: p, limit: l, total, totalPages: Math.ceil(total / l) },
     });
   } catch (err) {
     next(err);

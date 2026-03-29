@@ -1,18 +1,17 @@
 require('dotenv').config();
 
-const express    = require('express');
-const cors       = require('cors');
-const logger     = require('./logger');
-const requestLogger = require('./middleware/requestLogger');
-const errorHandler  = require('./middleware/errorHandler');
+const express         = require('express');
+const cors            = require('cors');
+const logger          = require('./logger');
+const requestLogger   = require('./middleware/requestLogger');
+const errorHandler    = require('./middleware/errorHandler');
 
-const vendorsRouter    = require('./routes/vendors');
-const awardsRouter     = require('./routes/awards');
-const agenciesRouter   = require('./routes/agencies');
-const naicsRouter      = require('./routes/naics');
-
-const analyticsRouter  = require('./routes/analytics');
-const dashboardRouter  = require('./routes/dashboard');
+const awardsRouter    = require('./routes/awards');
+const vendorsRouter   = require('./routes/vendors');
+const agenciesRouter  = require('./routes/agencies');
+const naicsRouter     = require('./routes/naics');
+const analyticsRouter = require('./routes/analytics');
+const dashboardRouter = require('./routes/dashboard');
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
@@ -70,20 +69,20 @@ app.get('/api', (_req, res) => {
 // ---------------------------------------------------------------------------
 // REST routes
 // ---------------------------------------------------------------------------
-app.use('/api/vendors',   vendorsRouter);
-app.use('/api/awards',    awardsRouter);
-app.use('/api/agencies',  agenciesRouter);
-app.use('/api/naics',     naicsRouter);
+app.use('/api/awards',     awardsRouter);
+app.use('/api/vendors',    vendorsRouter);
+app.use('/api/agencies',   agenciesRouter);
+app.use('/api/naics',      naicsRouter);
 
 // ---------------------------------------------------------------------------
 // Analytics routes
 // ---------------------------------------------------------------------------
-app.use('/api/analytics', analyticsRouter);
+app.use('/api/analytics',  analyticsRouter);
 
 // ---------------------------------------------------------------------------
 // Dashboard routes
 // ---------------------------------------------------------------------------
-app.use('/api/dashboard', dashboardRouter);
+app.use('/api/dashboard',  dashboardRouter);
 
 // ---------------------------------------------------------------------------
 // 404 handler
