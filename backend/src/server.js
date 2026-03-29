@@ -4,11 +4,14 @@ const express         = require('express');
 const cors            = require('cors');
 const logger          = require('./logger');
 const requestLogger   = require('./middleware/requestLogger');
-const awardsRouter    = require('./routes/awards');
-const uploadRouter    = require('./routes/upload');
-const companiesRouter = require('./routes/companies');
-const dashboardRouter = require('./routes/dashboard');
 const errorHandler    = require('./middleware/errorHandler');
+
+const awardsRouter    = require('./routes/awards');
+const vendorsRouter   = require('./routes/vendors');
+const agenciesRouter  = require('./routes/agencies');
+const naicsRouter     = require('./routes/naics');
+const analyticsRouter = require('./routes/analytics');
+const dashboardRouter = require('./routes/dashboard');
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
@@ -28,25 +31,64 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ---------------------------------------------------------------------------
-// Health check
+// Standard endpoints
 // ---------------------------------------------------------------------------
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime_seconds: Math.floor(process.uptime()) });
+});
+
+app.get('/health/db', async (_req, res, next) => {
+  try {
+    // TODO: run a lightweight DB ping e.g. SELECT 1
+    res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api', (_req, res) => {
+  res.json({
+    version: '1.0.0',
+    resources: [
+      'GET /api/vendors',
+      'GET /api/awards',
+      'GET /api/agencies',
+      'GET /api/naics',
+    ],
+    analytics: [
+      'GET /api/analytics/investment-scores',
+      'GET /api/analytics/emerging-winners',
+      'GET /api/analytics/risk-profile/:cage_code',
+      'GET /api/analytics/sector-heatmap',
+      'GET /api/analytics/win-rate/:cage_code',
+      'GET /api/analytics/geographic-clustering',
+    ],
+  });
 });
 
 // ---------------------------------------------------------------------------
-// API routes
+// REST routes
 // ---------------------------------------------------------------------------
 app.use('/api/awards',     awardsRouter);
-app.use('/api/upload',     uploadRouter);
-app.use('/api/companies',  companiesRouter);
+app.use('/api/vendors',    vendorsRouter);
+app.use('/api/agencies',   agenciesRouter);
+app.use('/api/naics',      naicsRouter);
+
+// ---------------------------------------------------------------------------
+// Analytics routes
+// ---------------------------------------------------------------------------
+app.use('/api/analytics',  analyticsRouter);
+
+// ---------------------------------------------------------------------------
+// Dashboard routes
+// ---------------------------------------------------------------------------
 app.use('/api/dashboard',  dashboardRouter);
 
 // ---------------------------------------------------------------------------
 // 404 handler
 // ---------------------------------------------------------------------------
 app.use((_req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ error: { status: 404, message: 'Route not found' } });
 });
 
 // ---------------------------------------------------------------------------

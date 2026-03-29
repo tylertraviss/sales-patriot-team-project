@@ -38,10 +38,10 @@ router.get('/top-earners', async (req, res, next) => {
     const values = [];
     const conditions = [];
 
-    if (year)          conditions.push(`at.award_fiscal_year = $${values.push(parseInt(year))}`);
-    if (agencyCode)    conditions.push(`at.contracting_agency_code = $${values.push(agencyCode)}`);
+    if (year)           conditions.push(`at.award_fiscal_year = $${values.push(parseInt(year))}`);
+    if (agencyCode)     conditions.push(`at.contracting_agency_code = $${values.push(agencyCode)}`);
     if (extentCompeted) conditions.push(`at.extent_competed_code = $${values.push(extentCompeted)}`);
-    if (awardType)     conditions.push(`at.award_type_description = $${values.push(awardType)}`);
+    if (awardType)      conditions.push(`at.award_type_description = $${values.push(awardType)}`);
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 

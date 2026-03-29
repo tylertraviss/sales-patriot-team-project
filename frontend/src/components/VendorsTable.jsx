@@ -11,17 +11,26 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+// Convert camelCase / snake_case keys to readable Title Case labels
+// e.g. "totalObligated" → "Total Obligated", "naics_code" → "Naics Code"
+function keyToLabel(key) {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 // Known columns with metadata. The table is built generically so unknown
 // fields from the API will still render — these just provide better labels
 // and formatting hints for the fields we expect.
 const COLUMNS = [
-  { key: 'vendorName',      label: 'Vendor Name',        sortable: true,  type: 'string',   width: 'min-w-[220px]' },
+  { key: 'name',            label: 'Vendor Name',        sortable: true,  type: 'string',   width: 'min-w-[220px]' },
+  { key: 'cage_code',       label: 'CAGE',               sortable: false, type: 'string',   width: 'w-[100px]' },
   { key: 'uei',             label: 'UEI',                sortable: true,  type: 'string',   width: 'w-[130px]' },
-  { key: 'totalObligated',  label: 'Total Obligated',    sortable: true,  type: 'currency', width: 'w-[160px]', align: 'right' },
-  { key: 'awardCount',      label: 'Award Count',        sortable: true,  type: 'number',   width: 'w-[120px]', align: 'right' },
-  { key: 'stateCode',       label: 'State',              sortable: false, type: 'badge',    width: 'w-[80px]',  align: 'center' },
-  { key: 'naicsCode',       label: 'NAICS',              sortable: false, type: 'string',   width: 'w-[100px]' },
-  { key: 'agencyCode',      label: 'Agency',             sortable: false, type: 'string',   width: 'w-[100px]' },
+  { key: 'total_obligated', label: 'Total Obligated',    sortable: true,  type: 'currency', width: 'w-[160px]', align: 'right' },
+  { key: 'award_count',     label: 'Award Count',        sortable: true,  type: 'number',   width: 'w-[120px]', align: 'right' },
+  { key: 'state_code',      label: 'State',              sortable: false, type: 'badge',    width: 'w-[80px]',  align: 'center' },
+  { key: 'country_code',    label: 'Country',            sortable: false, type: 'string',   width: 'w-[100px]' },
 ];
 
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -56,7 +65,7 @@ function SkeletonRows({ count, cols }) {
   ));
 }
 
-export default function VendorsTable({ data, loading, error, sort, onSort, onRetry, limit }) {
+export default function VendorsTable({ data, loading, error, sort, onSort, onRetry, limit, onRowClick }) {
   // Determine visible columns: always show COLUMNS, but also render any
   // extra keys found in the first row that aren't in our known set.
   const extraKeys = data.length
@@ -65,7 +74,7 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
 
   const allColumns = [
     ...COLUMNS,
-    ...extraKeys.map((k) => ({ key: k, label: k, sortable: false, type: 'string', width: '' })),
+    ...extraKeys.map((k) => ({ key: k, label: keyToLabel(k), sortable: false, type: 'string', width: '' })),
   ];
 
   // Detect which known columns are actually present in the data
@@ -144,14 +153,18 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
 
           {/* Data rows */}
           {!loading && !error && data.map((row, idx) => (
-            <TableRow key={row.uei ?? idx}>
+            <TableRow
+              key={row.uei ?? idx}
+              className={cn(onRowClick && 'cursor-pointer hover:bg-accent/60')}
+              onClick={() => onRowClick?.(row)}
+            >
               {displayColumns.map((col) => (
                 <TableCell
                   key={col.key}
                   className={cn(
                     col.align === 'right' && 'text-right tabular-nums',
                     col.align === 'center' && 'text-center',
-                    col.key === 'vendorName' && 'font-medium'
+                    col.key === 'name' && 'font-medium'
                   )}
                 >
                   {formatCell(row[col.key], col.type)}

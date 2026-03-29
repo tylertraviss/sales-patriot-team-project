@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { uploadCSV } from '../services/api';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const ACCEPTED_TYPES = '.csv,text/csv';
 
@@ -59,7 +60,7 @@ export default function FileUpload({ onUploadSuccess }) {
       setProgress(100);
       if (onUploadSuccess) onUploadSuccess(data);
     } catch (err) {
-      const msg = err.response?.data?.error || err.message || 'Upload failed.';
+      const msg = getApiErrorMessage(err, 'Upload failed.');
       setErrorMessage(msg);
       setStatus('error');
     }
