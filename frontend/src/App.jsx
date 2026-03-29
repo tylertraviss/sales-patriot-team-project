@@ -11,7 +11,7 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'vendors',   label: 'Vendors'   },
   { id: 'graph',     label: 'Sector Graph' },
-  { id: 'analytics', label: 'SalesPatriot Opportunities' },
+  { id: 'analytics', label: 'Opportunities' },
   { id: 'agent',        label: 'Agent'         },
   { id: 'system-design', label: 'System Design' },
 ];
