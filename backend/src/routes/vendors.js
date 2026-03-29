@@ -173,16 +173,26 @@ router.get('/:cage_code/awards/summary', async (req, res, next) => {
     }
     const { vendor_id } = vendorCheck.rows[0];
 
-    const [byYear, byAgency, byCompetition, totals] = await Promise.all([
-      // Spend by fiscal year
+    const [byYear, byAgency, byCompetition, totals, byAwardType, byNaics, byState] = await Promise.all([
+      // Spend by fiscal year — fall back to award_date / date_signed when fiscal year columns are null
       db.query(`
         SELECT
-          COALESCE(award_fiscal_year, contract_fiscal_year) AS "fiscalYear",
-          SUM(award_amount)                                  AS "totalObligated",
-          COUNT(*)                                           AS "awardCount"
+          COALESCE(
+            award_fiscal_year,
+            contract_fiscal_year,
+            EXTRACT(YEAR FROM award_date)::INT,
+            EXTRACT(YEAR FROM date_signed)::INT
+          ) AS "fiscalYear",
+          SUM(award_amount) AS "totalObligated",
+          COUNT(*)          AS "awardCount"
         FROM award_transactions
         WHERE vendor_id = $1
-          AND COALESCE(award_fiscal_year, contract_fiscal_year) IS NOT NULL
+          AND COALESCE(
+            award_fiscal_year,
+            contract_fiscal_year,
+            EXTRACT(YEAR FROM award_date)::INT,
+            EXTRACT(YEAR FROM date_signed)::INT
+          ) IS NOT NULL
         GROUP BY "fiscalYear"
         ORDER BY "fiscalYear" ASC
       `, [vendor_id]),
@@ -224,6 +234,48 @@ router.get('/:cage_code/awards/summary', async (req, res, next) => {
         FROM award_transactions
         WHERE vendor_id = $1
       `, [vendor_id]),
+
+      // By award type
+      db.query(`
+        SELECT
+          award_type_description AS "awardType",
+          COUNT(*)               AS "awardCount",
+          SUM(award_amount)      AS "totalObligated"
+        FROM award_transactions
+        WHERE vendor_id = $1
+          AND award_type_description IS NOT NULL
+        GROUP BY award_type_description
+        ORDER BY "awardCount" DESC
+      `, [vendor_id]),
+
+      // By NAICS code
+      db.query(`
+        SELECT
+          naics_code        AS "naicsCode",
+          naics_description AS "naicsDescription",
+          COUNT(*)          AS "awardCount",
+          SUM(award_amount) AS "totalObligated"
+        FROM award_transactions
+        WHERE vendor_id = $1
+          AND naics_code IS NOT NULL
+        GROUP BY naics_code, naics_description
+        ORDER BY "totalObligated" DESC
+        LIMIT 8
+      `, [vendor_id]),
+
+      // By place of performance state
+      db.query(`
+        SELECT
+          place_of_performance_state_code AS "stateCode",
+          COUNT(*)                        AS "awardCount",
+          SUM(award_amount)               AS "totalObligated"
+        FROM award_transactions
+        WHERE vendor_id = $1
+          AND place_of_performance_state_code IS NOT NULL
+        GROUP BY place_of_performance_state_code
+        ORDER BY "totalObligated" DESC
+        LIMIT 10
+      `, [vendor_id]),
     ]);
 
     res.json({
@@ -233,6 +285,9 @@ router.get('/:cage_code/awards/summary', async (req, res, next) => {
       byYear:         byYear.rows,
       byAgency:       byAgency.rows,
       byCompetition:  byCompetition.rows,
+      byAwardType:    byAwardType.rows,
+      byNaics:        byNaics.rows,
+      byState:        byState.rows,
     });
   } catch (err) {
     next(err);

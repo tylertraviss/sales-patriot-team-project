@@ -15,6 +15,10 @@ import VendorAgencyChart from './VendorAgencyChart';
 import VendorCompetitionChart from './VendorCompetitionChart';
 import VendorAwardsTable from './VendorAwardsTable';
 import VendorAvgContractSize from './VendorAvgContractSize';
+import VendorYoYSparkline from './VendorYoYSparkline';
+import VendorAwardTypeDonut from './VendorAwardTypeDonut';
+import VendorNaicsChart from './VendorNaicsChart';
+import VendorStateChart from './VendorStateChart';
 import { getVendor, getVendorSummary, getWinRate } from '@/services/vendors';
 
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -71,6 +75,9 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
   const spendByYear   = summary?.byYear         ?? [];
   const byAgency      = summary?.byAgency        ?? [];
   const byCompetition = summary?.byCompetition   ?? [];
+  const byAwardType   = summary?.byAwardType     ?? [];
+  const byNaics       = summary?.byNaics         ?? [];
+  const byState       = summary?.byState         ?? [];
 
   const totalObligated = vendor?.totalObligated ?? summary?.totalObligated ?? null;
   const awardCount     = vendor?.awardCount     ?? summary?.awardCount     ?? null;
@@ -115,6 +122,11 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
               </div>
             )}
 
+            {/* YoY growth sparkline — top of analytics */}
+            {spendByYear.length >= 2 && (
+              <VendorYoYSparkline data={spendByYear} />
+            )}
+
             {/* Identity + certifications */}
             {vendor && (
               <>
@@ -141,6 +153,36 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
                 <Separator />
                 <Section title="Avg Contract Size by Year">
                   <VendorAvgContractSize data={spendByYear} />
+                </Section>
+              </>
+            )}
+
+            {/* Award type breakdown */}
+            {byAwardType.length > 0 && (
+              <>
+                <Separator />
+                <Section title="Award Type Breakdown">
+                  <VendorAwardTypeDonut data={byAwardType} />
+                </Section>
+              </>
+            )}
+
+            {/* NAICS breakdown */}
+            {byNaics.length > 0 && (
+              <>
+                <Separator />
+                <Section title="Top NAICS Codes">
+                  <VendorNaicsChart data={byNaics} />
+                </Section>
+              </>
+            )}
+
+            {/* Place of performance */}
+            {byState.length > 0 && (
+              <>
+                <Separator />
+                <Section title="Place of Performance">
+                  <VendorStateChart data={byState} />
                 </Section>
               </>
             )}

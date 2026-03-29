@@ -3,7 +3,6 @@ import { LayoutList, Globe2, Map, Loader2 } from 'lucide-react';
 import VendorsFilters from '@/components/VendorsFilters';
 import VendorsTable from '@/components/VendorsTable';
 import VendorsPagination from '@/components/VendorsPagination';
-import VendorDetailDrawer from '@/components/vendor/VendorDetailDrawer';
 import VendorMap from '@/components/VendorMap';
 import { mockGetVendors } from '@/services/mockApi';
 import { cn } from '@/lib/utils';
@@ -28,7 +27,7 @@ const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 const GLOBE_PAGE_SIZE = 100;  // backend hard cap
 const GLOBE_MAX_PAGES = 20;   // 20 × 100 = 2,000 vendors max
 
-export default function Vendors() {
+export default function Vendors({ onVendorClick }) {
   const [viewMode, setViewMode] = useState('table');
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
@@ -46,8 +45,6 @@ export default function Vendors() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [selectedVendor, setSelectedVendor] = useState(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Debounce search
   useEffect(() => {
@@ -178,10 +175,6 @@ export default function Vendors() {
     setPagination({ page: 1, limit: Number(newLimit) });
   }
 
-  function handleRowClick(row) {
-    setSelectedVendor(row);
-    setDrawerOpen(true);
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -250,7 +243,7 @@ export default function Vendors() {
             onSort={handleSort}
             onRetry={fetchVendors}
             limit={pagination.limit}
-            onRowClick={handleRowClick}
+            onRowClick={onVendorClick}
           />
           {paginationMeta && (
             <VendorsPagination
@@ -274,7 +267,7 @@ export default function Vendors() {
             vendors={allVendors.length ? allVendors : data}
             totalVendors={allVendorsTotal}
             loading={globeLoading}
-            onVendorClick={handleRowClick}
+            onVendorClick={onVendorClick}
           />
         </Suspense>
       )}
@@ -282,19 +275,10 @@ export default function Vendors() {
       {/* MAP VIEW */}
       {viewMode === 'map' && (
         <VendorMap onStateClick={(stateData) => {
-          // Optionally filter table to that state when user clicks a state bubble
           handleFilterChange('stateCode', stateData.stateCode);
           setViewMode('table');
         }} />
       )}
-
-      {/* Vendor detail drawer — shared between both views */}
-      <VendorDetailDrawer
-        cageCode={selectedVendor?.cageCode || selectedVendor?.uei}
-        vendorName={selectedVendor?.name}
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-      />
     </div>
   );
 }

@@ -366,7 +366,7 @@ router.get('/win-rate/:cage_code', async (req, res, next) => {
     const { year } = req.query;
 
     const vendorResult = await db.query(
-      `SELECT vendor_id, vendor_name FROM vendor_entities WHERE cage_code = $1`,
+      `SELECT vendor_id, vendor_name FROM vendor_entities WHERE cage_code = $1 OR uei = $1`,
       [cage_code.toUpperCase()]
     );
     if (!vendorResult.rows.length) {
