@@ -87,14 +87,14 @@ export default function TopEarners() {
       ) : data.length === 0 ? (
         <div className="h-[280px] flex items-center justify-center text-gray-400 text-sm">No data</div>
       ) : (
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={data} margin={{ top: 0, right: 8, left: 0, bottom: 60 }}>
+        <ResponsiveContainer width="100%" height={460}>
+          <BarChart data={data} margin={{ top: 0, right: 8, left: 0, bottom: 200 }}>
             <XAxis
               dataKey="name"
               tick={{ fontSize: 11, fill: '#9ca3af' }}
               axisLine={false}
               tickLine={false}
-              angle={-35}
+              angle={-45}
               textAnchor="end"
               interval={0}
             />

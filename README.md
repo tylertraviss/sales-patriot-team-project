@@ -158,4 +158,4 @@ GET /health/db
 - **Frontend team** — display, upload UI, consumes headers from `/api/awards/headers`
 
 
-build regressional predictive trend for companies based off historic
+build regressional predictive trend for companies based off historic trends.
