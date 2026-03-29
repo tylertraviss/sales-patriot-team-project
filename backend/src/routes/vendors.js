@@ -88,6 +88,7 @@ router.get('/', async (req, res, next) => {
           v.cage_code                                     AS "cageCode",
           v.uei,
           v.vendor_name                                   AS "name",
+          v.city                                          AS "city",
           v.state_code                                    AS "stateCode",
           v.country_code                                  AS "countryCode",
           v.socio_economic_indicator                      AS "socioEconomicIndicator",

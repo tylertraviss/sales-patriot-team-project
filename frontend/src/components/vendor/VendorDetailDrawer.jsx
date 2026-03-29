@@ -14,7 +14,7 @@ import VendorSpendChart from './VendorSpendChart';
 import VendorAgencyChart from './VendorAgencyChart';
 import VendorCompetitionChart from './VendorCompetitionChart';
 import VendorAwardsTable from './VendorAwardsTable';
-import { getVendor, getVendorSummary } from '@/services/vendors';
+import { getVendor, getVendorSummary, getWinRate } from '@/services/vendors';
 
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
@@ -40,6 +40,7 @@ function StatCard({ label, value, sub }) {
 export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenChange }) {
   const [vendor, setVendor] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [winRate, setWinRate] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -47,12 +48,18 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
     if (!open || !cageCode) return;
     setVendor(null);
     setSummary(null);
+    setWinRate(null);
     setError(null);
     setLoading(true);
 
-    Promise.allSettled([getVendor(cageCode), getVendorSummary(cageCode)]).then(([vRes, sRes]) => {
-      if (vRes.status === 'fulfilled') setVendor(vRes.value);
-      if (sRes.status === 'fulfilled') setSummary(sRes.value);
+    Promise.allSettled([
+      getVendor(cageCode),
+      getVendorSummary(cageCode),
+      getWinRate(cageCode),
+    ]).then(([vRes, sRes, wrRes]) => {
+      if (vRes.status  === 'fulfilled') setVendor(vRes.value);
+      if (sRes.status  === 'fulfilled') setSummary(sRes.value);
+      if (wrRes.status === 'fulfilled') setWinRate(wrRes.value);
       if (vRes.status === 'rejected' && sRes.status === 'rejected') {
         setError('Failed to load vendor data.');
       }
@@ -112,7 +119,7 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
               <>
                 <Separator />
                 <Section title="Vendor Profile">
-                  <VendorProfile vendor={vendor} />
+                  <VendorProfile vendor={vendor} winRate={winRate} />
                 </Section>
               </>
             )}

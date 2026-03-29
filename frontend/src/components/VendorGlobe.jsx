@@ -1,42 +1,67 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Globe from 'react-globe.gl';
 
-// ── Coordinates for mock cities (city+state → lat/lng) ──────────────────────
-const COORDS = {
-  'RIDLEY PARK_PA':       { lat: 39.881,  lng: -75.330 },
-  'STERLING HEIGHTS_MI':  { lat: 42.580,  lng: -83.030 },
-  'OSHKOSH_WI':           { lat: 44.025,  lng: -88.543 },
-  'CLARKSBURG_MD':        { lat: 39.108,  lng: -77.269 },
-  'WICHITA_KS':           { lat: 37.692,  lng: -97.330 },
-  'CUDDY_PA':             { lat: 40.352,  lng: -80.177 },
-  'LA CROSSE_WI':         { lat: 43.801,  lng: -91.240 },
-  'LYONS FALLS_NY':       { lat: 43.611,  lng: -75.371 },
-  'RANCHO CORDOVA_CA':    { lat: 38.589,  lng: -121.303 },
-  'TUCSON_AZ':            { lat: 32.222,  lng: -110.975 },
-  'MARIETTA_GA':          { lat: 33.952,  lng: -84.550 },
-  'SCOTTSDALE_AZ':        { lat: 33.494,  lng: -111.926 },
-  // Fallbacks by state centre (for any real-API vendors without city match)
-  'PA':  { lat: 40.590, lng: -77.209 },
-  'MI':  { lat: 44.314, lng: -85.602 },
-  'WI':  { lat: 44.500, lng: -89.500 },
-  'MD':  { lat: 39.045, lng: -76.641 },
-  'KS':  { lat: 38.527, lng: -96.726 },
-  'NY':  { lat: 42.165, lng: -74.948 },
-  'CA':  { lat: 36.778, lng: -119.418 },
-  'AZ':  { lat: 34.048, lng: -111.093 },
-  'GA':  { lat: 32.165, lng: -82.900 },
-  'TX':  { lat: 31.000, lng: -100.000 },
-  'VA':  { lat: 37.431, lng: -78.656 },
-  'FL':  { lat: 27.994, lng: -81.760 },
+// ── All 50 US state centroids ─────────────────────────────────────────────────
+const STATE_COORDS = {
+  AL: { lat: 32.806,  lng: -86.791  },
+  AK: { lat: 61.370,  lng: -152.404 },
+  AZ: { lat: 33.729,  lng: -111.431 },
+  AR: { lat: 34.969,  lng: -92.373  },
+  CA: { lat: 36.778,  lng: -119.418 },
+  CO: { lat: 39.550,  lng: -105.782 },
+  CT: { lat: 41.597,  lng: -72.755  },
+  DE: { lat: 39.318,  lng: -75.507  },
+  FL: { lat: 27.994,  lng: -81.760  },
+  GA: { lat: 32.165,  lng: -82.900  },
+  HI: { lat: 19.898,  lng: -155.665 },
+  ID: { lat: 44.240,  lng: -114.479 },
+  IL: { lat: 40.349,  lng: -88.986  },
+  IN: { lat: 39.849,  lng: -86.258  },
+  IA: { lat: 42.011,  lng: -93.210  },
+  KS: { lat: 38.527,  lng: -96.726  },
+  KY: { lat: 37.669,  lng: -84.670  },
+  LA: { lat: 31.169,  lng: -91.867  },
+  ME: { lat: 44.693,  lng: -69.382  },
+  MD: { lat: 39.045,  lng: -76.641  },
+  MA: { lat: 42.230,  lng: -71.530  },
+  MI: { lat: 44.314,  lng: -85.602  },
+  MN: { lat: 46.392,  lng: -94.636  },
+  MS: { lat: 32.741,  lng: -89.679  },
+  MO: { lat: 38.456,  lng: -92.288  },
+  MT: { lat: 46.921,  lng: -110.454 },
+  NE: { lat: 41.125,  lng: -98.268  },
+  NV: { lat: 38.313,  lng: -117.055 },
+  NH: { lat: 43.452,  lng: -71.563  },
+  NJ: { lat: 40.298,  lng: -74.521  },
+  NM: { lat: 34.841,  lng: -106.249 },
+  NY: { lat: 42.165,  lng: -74.948  },
+  NC: { lat: 35.630,  lng: -79.806  },
+  ND: { lat: 47.528,  lng: -99.784  },
+  OH: { lat: 40.388,  lng: -82.764  },
+  OK: { lat: 35.565,  lng: -96.929  },
+  OR: { lat: 44.572,  lng: -122.071 },
+  PA: { lat: 40.590,  lng: -77.209  },
+  RI: { lat: 41.681,  lng: -71.511  },
+  SC: { lat: 33.856,  lng: -80.945  },
+  SD: { lat: 44.299,  lng: -99.438  },
+  TN: { lat: 35.747,  lng: -86.692  },
+  TX: { lat: 31.054,  lng: -97.563  },
+  UT: { lat: 40.150,  lng: -111.862 },
+  VT: { lat: 44.045,  lng: -72.710  },
+  VA: { lat: 37.769,  lng: -78.169  },
+  WA: { lat: 47.400,  lng: -121.490 },
+  WV: { lat: 38.491,  lng: -80.954  },
+  WI: { lat: 44.268,  lng: -89.616  },
+  WY: { lat: 42.755,  lng: -107.302 },
+  DC: { lat: 38.907,  lng: -77.036  },
+  PR: { lat: 18.221,  lng: -66.590  },
+  GU: { lat: 13.444,  lng: 144.794  },
 };
 
 function resolveCoords(vendor) {
   // Support both snake_case (backend) and camelCase (mock)
-  const state   = vendor.state_code  ?? vendor.stateCode;
-  const city    = vendor.city;
-  const cityKey = `${city?.toUpperCase()}_${state?.toUpperCase()}`;
-  if (COORDS[cityKey]) return COORDS[cityKey];
-  if (state && COORDS[state.toUpperCase()]) return COORDS[state.toUpperCase()];
+  const state = (vendor.state_code ?? vendor.stateCode ?? '').toUpperCase().trim();
+  if (state && STATE_COORDS[state]) return STATE_COORDS[state];
   return null;
 }
 

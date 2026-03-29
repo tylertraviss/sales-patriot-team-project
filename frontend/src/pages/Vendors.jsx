@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
-import { LayoutList, Globe2, Loader2 } from 'lucide-react';
+import { LayoutList, Globe2, Map, Loader2 } from 'lucide-react';
 import VendorsFilters from '@/components/VendorsFilters';
 import VendorsTable from '@/components/VendorsTable';
 import VendorsPagination from '@/components/VendorsPagination';
 import VendorDetailDrawer from '@/components/vendor/VendorDetailDrawer';
+import VendorMap from '@/components/VendorMap';
 import { mockGetVendors } from '@/services/mockApi';
 import { cn } from '@/lib/utils';
 
@@ -184,6 +185,18 @@ export default function Vendors() {
             <Globe2 className="h-4 w-4" />
             Globe
           </button>
+          <button
+            onClick={() => setViewMode('map')}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+              viewMode === 'map'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <Map className="h-4 w-4" />
+            Map
+          </button>
         </div>
       </div>
 
@@ -228,6 +241,15 @@ export default function Vendors() {
             onVendorClick={handleRowClick}
           />
         </Suspense>
+      )}
+
+      {/* MAP VIEW */}
+      {viewMode === 'map' && (
+        <VendorMap onStateClick={(stateData) => {
+          // Optionally filter table to that state when user clicks a state bubble
+          handleFilterChange('stateCode', stateData.stateCode);
+          setViewMode('table');
+        }} />
       )}
 
       {/* Vendor detail drawer — shared between both views */}

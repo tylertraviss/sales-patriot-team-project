@@ -3,7 +3,12 @@ import {
   mockGetVendorSummary,
   mockGetVendorAwards,
 } from './mockApi';
-import { getVendor as apiGetVendor, getVendorSummary as apiGetVendorSummary, getVendorAwards as apiGetVendorAwards } from './api';
+import {
+  getVendor as apiGetVendor,
+  getVendorSummary as apiGetVendorSummary,
+  getVendorAwards as apiGetVendorAwards,
+  getWinRate as apiGetWinRate,
+} from './api';
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 
@@ -29,4 +34,13 @@ export function getVendorSummary(cageCode) {
 export function getVendorAwards(cageCode, params = {}) {
   if (USE_MOCK) return mockGetVendorAwards(cageCode, params);
   return apiGetVendorAwards(cageCode, params);
+}
+
+/**
+ * GET /api/analytics/win-rate/:cage_code
+ * Competitive win rate, sole source split, set-aside history.
+ */
+export function getWinRate(cageCode, params = {}) {
+  // No mock implementation — always hit real API
+  return apiGetWinRate(cageCode, params);
 }
