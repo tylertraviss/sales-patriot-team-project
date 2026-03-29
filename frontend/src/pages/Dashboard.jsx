@@ -1,5 +1,4 @@
 import KPIBanner from '../components/KPIBanner';
-import AwardTypeBreakdown from '../components/AwardTypeBreakdown';
 import TopNaics from '../components/TopNaics';
 import SpendingByState from '../components/SpendingByState';
 import TopEarners from '../components/TopEarners';
@@ -14,9 +13,8 @@ export default function Dashboard() {
       {/* Top earners — full width, just under KPIs */}
       <TopEarners />
 
-      {/* 3 charts side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <AwardTypeBreakdown />
+      {/* 2 charts side by side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <TopNaics />
         <SpendingByState />
       </div>
