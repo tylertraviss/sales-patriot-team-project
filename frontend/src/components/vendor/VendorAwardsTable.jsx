@@ -6,9 +6,6 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -21,24 +18,49 @@ function competitionVariant(val) {
   return 'secondary';
 }
 
-export default function VendorAwardsTable({ uei }) {
-  const [awards, setAwards] = useState([]);
-  const [meta, setMeta] = useState(null);
-  const [page, setPage] = useState(1);
-  const [limit] = useState(10);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+// Columns — keys match backend snake_case field names directly
+const cols = [
+  { key: 'piid',                  label: 'Contract ID',  width: 'w-[140px]' },
+  { key: 'dollars_obligated',     label: 'Obligated',    width: 'w-[120px]', align: 'right' },
+  { key: 'date_signed',           label: 'Date Signed',  width: 'w-[110px]' },
+  { key: 'award_type',            label: 'Type',         width: 'w-[120px]' },
+  { key: 'agency_code',           label: 'Agency',       width: 'w-[90px]' },
+  { key: 'extent_competed_name',  label: 'Competition',  width: '' },
+  { key: 'set_aside_name',        label: 'Set-Aside',    width: 'w-[100px]' },
+];
 
-  const fetch = useCallback(async () => {
+function cellValue(row, key) {
+  const v = row[key];
+  if (v === null || v === undefined || v === '') return <span className="text-muted-foreground">—</span>;
+  if (key === 'dollars_obligated') return <span className="tabular-nums">{fmt.format(Number(v))}</span>;
+  if (key === 'date_signed') return String(v).slice(0, 10);
+  if (key === 'extent_competed_name') {
+    const label = String(v)
+      .replace('FULL AND OPEN COMPETITION AFTER EXCLUSION OF SOURCES', 'Full & Open (Excl.)')
+      .replace('FULL AND OPEN COMPETITION', 'Full & Open')
+      .replace('NOT AVAILABLE FOR COMPETITION', 'Not Competed');
+    return <Badge variant={competitionVariant(String(v))} className="text-xs whitespace-nowrap">{label}</Badge>;
+  }
+  if (key === 'set_aside_name' && v !== 'NONE' && v !== 'N/A') {
+    return <Badge variant="secondary" className="text-xs">{v}</Badge>;
+  }
+  return <span className="truncate max-w-[160px] block" title={String(v)}>{String(v)}</span>;
+}
+
+export default function VendorAwardsTable({ cageCode }) {
+  const [awards, setAwards] = useState([]);
+  const [meta, setMeta]     = useState(null);
+  const [page, setPage]     = useState(1);
+  const [limit]             = useState(10);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState(null);
+
+  const load = useCallback(async () => {
+    if (!cageCode) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await getVendorAwards(uei, {
-        page,
-        limit,
-        sort: 'dollarsObligated',
-        order: 'desc',
-      });
+      const res = await getVendorAwards(cageCode, { page, limit, sort: 'award_amount', order: 'desc' });
       setAwards(res.data ?? []);
       setMeta(res.pagination ?? null);
     } catch (e) {
@@ -46,34 +68,9 @@ export default function VendorAwardsTable({ uei }) {
     } finally {
       setLoading(false);
     }
-  }, [uei, page, limit]);
+  }, [cageCode, page, limit]);
 
-  useEffect(() => { fetch(); }, [fetch]);
-
-  const cols = [
-    { key: 'piid',             label: 'Contract ID',  width: 'w-[140px]' },
-    { key: 'dollarsObligated', label: 'Obligated',    width: 'w-[120px]', align: 'right' },
-    { key: 'dateSigned',       label: 'Date Signed',  width: 'w-[110px]' },
-    { key: 'awardType',        label: 'Type',         width: 'w-[120px]' },
-    { key: 'agencyCode',       label: 'Agency',       width: 'w-[90px]' },
-    { key: 'extentCompeted',   label: 'Competition',  width: '' },
-    { key: 'setAsideType',     label: 'Set-Aside',    width: 'w-[100px]' },
-  ];
-
-  function cellValue(row, key) {
-    const v = row[key] ?? row[key.replace(/([A-Z])/g, '_$1').toLowerCase()];
-    if (v === null || v === undefined || v === '') return <span className="text-muted-foreground">—</span>;
-    if (key === 'dollarsObligated') return <span className="tabular-nums">{fmt.format(Number(v))}</span>;
-    if (key === 'dateSigned') return String(v).slice(0, 10);
-    if (key === 'extentCompeted') {
-      const label = String(v).replace('FULL AND OPEN COMPETITION AFTER EXCLUSION OF SOURCES', 'Full & Open (Excl.)').replace('FULL AND OPEN COMPETITION', 'Full & Open').replace('NOT AVAILABLE FOR COMPETITION', 'Not Competed');
-      return <Badge variant={competitionVariant(String(v))} className="text-xs whitespace-nowrap">{label}</Badge>;
-    }
-    if (key === 'setAsideType' && v !== 'NONE' && v !== 'N/A') {
-      return <Badge variant="secondary" className="text-xs">{v}</Badge>;
-    }
-    return <span className="truncate max-w-[160px] block" title={String(v)}>{String(v)}</span>;
-  }
+  useEffect(() => { load(); }, [load]);
 
   return (
     <div className="space-y-2">
@@ -92,9 +89,7 @@ export default function VendorAwardsTable({ uei }) {
             {loading && Array.from({ length: limit }).map((_, i) => (
               <TableRow key={i} className="animate-pulse">
                 {cols.map((c) => (
-                  <TableCell key={c.key}>
-                    <div className="h-3 rounded bg-muted w-3/4" />
-                  </TableCell>
+                  <TableCell key={c.key}><div className="h-3 rounded bg-muted w-3/4" /></TableCell>
                 ))}
               </TableRow>
             ))}
@@ -113,7 +108,7 @@ export default function VendorAwardsTable({ uei }) {
               </TableRow>
             )}
             {!loading && !error && awards.map((row, i) => (
-              <TableRow key={row.piid ?? row.contractId ?? i}>
+              <TableRow key={row.piid ?? i}>
                 {cols.map((c) => (
                   <TableCell key={c.key} className={cn(c.align === 'right' && 'text-right', 'text-xs py-2')}>
                     {cellValue(row, c.key)}
@@ -125,7 +120,6 @@ export default function VendorAwardsTable({ uei }) {
         </Table>
       </div>
 
-      {/* Mini pagination */}
       {meta && meta.totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
           <p className="text-xs text-muted-foreground">

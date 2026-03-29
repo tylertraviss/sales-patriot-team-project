@@ -19,7 +19,7 @@ const DEFAULT_FILTERS = {
   setAsideType: '',
 };
 
-const DEFAULT_SORT = { sort: 'totalObligated', order: 'desc' };
+const DEFAULT_SORT = { sort: 'vendor_name', order: 'asc' };
 const DEFAULT_PAGE = { page: 1, limit: 25 };
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
@@ -83,12 +83,9 @@ export default function Vendors() {
         params.set('limit', pagination.limit);
         params.set('sort', sort.sort);
         params.set('order', sort.order);
-        if (filters.year) params.set('year', filters.year);
+        // Backend accepts: search, state_code (other filters not yet supported)
         if (debouncedSearch) params.set('search', debouncedSearch);
-        if (filters.stateCode) params.set('stateCode', filters.stateCode);
-        if (filters.naicsCode) params.set('naicsCode', filters.naicsCode);
-        if (filters.agencyCode) params.set('agencyCode', filters.agencyCode);
-        if (filters.setAsideType) params.set('setAsideType', filters.setAsideType);
+        if (filters.stateCode) params.set('state_code', filters.stateCode);
         const res = await fetch(`${BASE_URL}/vendors?${params.toString()}`);
         if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`);
         json = await res.json();
@@ -112,7 +109,7 @@ export default function Vendors() {
       try {
         const json = USE_MOCK
           ? await mockGetVendors({ page: 1, limit: GLOBE_LIMIT, sort: 'totalObligated', order: 'desc' })
-          : await fetch(`${BASE_URL}/vendors?page=1&limit=${GLOBE_LIMIT}&sort=totalObligated&order=desc`)
+          : await fetch(`${BASE_URL}/vendors?page=1&limit=${GLOBE_LIMIT}&sort=vendor_name&order=asc`)
               .then((r) => r.json());
         setAllVendors(json.data ?? []);
       } catch { /* silent — globe just shows fewer pins */ }
@@ -237,8 +234,8 @@ export default function Vendors() {
 
       {/* Vendor detail drawer — shared between both views */}
       <VendorDetailDrawer
-        uei={selectedVendor?.uei}
-        vendorName={selectedVendor?.vendorName}
+        cageCode={selectedVendor?.cage_code}
+        vendorName={selectedVendor?.name}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
       />

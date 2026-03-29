@@ -2,22 +2,22 @@ import { Building2, MapPin, Users, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
-const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+const fmt    = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const fmtNum = new Intl.NumberFormat('en-US');
 
-const DIVERSITY_FLAGS = [
-  { key: 'smallBusinessFlag',         label: 'Small Business',           variant: 'default' },
-  { key: 'wosbFlag',                  label: 'WOSB',                     variant: 'secondary' },
-  { key: 'edwosbFlag',                label: 'EDWOSB',                   variant: 'secondary' },
-  { key: 'veteranOwnedFlag',          label: 'Veteran-Owned',            variant: 'secondary' },
-  { key: 'sdvobFlag',                 label: 'Service-Disabled Veteran', variant: 'secondary' },
-  { key: 'hubzoneCertFlag',           label: 'HUBZone',                  variant: 'secondary' },
-  { key: 'eightAFlag',                label: '8(a)',                     variant: 'secondary' },
-  { key: 'sdbFlag',                   label: 'SDB',                      variant: 'secondary' },
-  { key: 'minorityOwnedFlag',         label: 'Minority-Owned',           variant: 'outline' },
-  { key: 'hispanicOwnedFlag',         label: 'Hispanic-Owned',           variant: 'outline' },
-  { key: 'nativeAmericanOwnedFlag',   label: 'Native American-Owned',    variant: 'outline' },
-  { key: 'emergingSmallBusinessFlag', label: 'Emerging Small Business',  variant: 'outline' },
+// Backend returns socio_economic_indicator as a descriptive string.
+// Map known substrings to badge labels.
+const SEI_BADGES = [
+  { match: 'SMALL BUSINESS',                  label: 'Small Business',           variant: 'default' },
+  { match: 'WOMEN',                           label: 'Women-Owned',              variant: 'secondary' },
+  { match: 'VETERAN',                         label: 'Veteran-Owned',            variant: 'secondary' },
+  { match: 'SERVICE-DISABLED',                label: 'Service-Disabled Veteran', variant: 'secondary' },
+  { match: 'HUBZONE',                         label: 'HUBZone',                  variant: 'secondary' },
+  { match: '8(A)',                            label: '8(a)',                     variant: 'secondary' },
+  { match: 'DISADVANTAGED',                   label: 'SDB',                      variant: 'secondary' },
+  { match: 'MINORITY',                        label: 'Minority-Owned',           variant: 'outline' },
+  { match: 'NATIVE AMERICAN',                 label: 'Native American-Owned',    variant: 'outline' },
+  { match: 'HISPANIC',                        label: 'Hispanic-Owned',           variant: 'outline' },
 ];
 
 function Stat({ icon: Icon, label, value }) {
@@ -36,43 +36,56 @@ function Stat({ icon: Icon, label, value }) {
 export default function VendorProfile({ vendor }) {
   if (!vendor) return null;
 
-  const location = [vendor.city, vendor.stateCode, vendor.countryName]
-    .filter(Boolean)
-    .join(', ');
+  // Support both camelCase (mock) and snake_case (backend)
+  const cage          = vendor.cage_code      ?? vendor.cageCode;
+  const uei           = vendor.uei;
+  const city          = vendor.city;
+  const stateCode     = vendor.state_code     ?? vendor.stateCode;
+  const countryCode   = vendor.country_code   ?? vendor.countryCode;
+  const employees     = vendor.number_of_employees ?? vendor.numberOfEmployees;
+  const revenue       = vendor.annual_revenue ?? vendor.annualRevenue;
+  const parent        = vendor.parent_company_name ?? vendor.parentCompanyName;
+  const sei           = vendor.socio_economic_indicator ?? '';
 
-  const activeDiversity = DIVERSITY_FLAGS.filter(
-    (f) => vendor[f.key] === true || vendor[f.key] === 'Y' || vendor[f.key] === 'YES'
-  );
+  const location = [city, stateCode, countryCode].filter(Boolean).join(', ');
+
+  // Derive badges from the SEI string
+  const seiBadges = SEI_BADGES.filter((b) => sei.toUpperCase().includes(b.match));
+
+  // Also check legacy camelCase boolean flags (mock data path)
+  const legacyFlags = [
+    { key: 'smallBusinessFlag',  label: 'Small Business',           variant: 'default' },
+    { key: 'wosbFlag',           label: 'WOSB',                     variant: 'secondary' },
+    { key: 'veteranOwnedFlag',   label: 'Veteran-Owned',            variant: 'secondary' },
+    { key: 'sdvobFlag',          label: 'Service-Disabled Veteran', variant: 'secondary' },
+    { key: 'hubzoneCertFlag',    label: 'HUBZone',                  variant: 'secondary' },
+    { key: 'eightAFlag',         label: '8(a)',                     variant: 'secondary' },
+    { key: 'sdbFlag',            label: 'SDB',                      variant: 'secondary' },
+  ].filter((f) => vendor[f.key] === true || vendor[f.key] === 'Y');
+
+  const allBadges = seiBadges.length > 0 ? seiBadges : legacyFlags;
 
   return (
     <div className="space-y-4">
-      {/* Identity */}
       <div className="space-y-3">
-        <Stat icon={Building2} label="UEI / CAGE" value={[vendor.uei, vendor.cageCode].filter(Boolean).join(' · ')} />
+        <Stat icon={Building2} label="UEI / CAGE" value={[uei, cage].filter(Boolean).join(' · ')} />
         {location && <Stat icon={MapPin} label="Location" value={location} />}
-        {vendor.parentCompanyName && (
-          <Stat icon={Building2} label="Parent Company" value={vendor.parentCompanyName} />
-        )}
-        {vendor.numberOfEmployees && (
-          <Stat icon={Users} label="Employees" value={fmtNum.format(vendor.numberOfEmployees)} />
-        )}
-        {vendor.annualRevenue && (
-          <Stat icon={DollarSign} label="Annual Revenue" value={fmt.format(vendor.annualRevenue)} />
-        )}
+        {parent && <Stat icon={Building2} label="Parent Company" value={parent} />}
+        {employees && <Stat icon={Users} label="Employees" value={fmtNum.format(Number(employees))} />}
+        {revenue && <Stat icon={DollarSign} label="Annual Revenue" value={fmt.format(Number(revenue))} />}
       </div>
 
-      {/* Diversity / certifications */}
-      {activeDiversity.length > 0 && (
+      {allBadges.length > 0 && (
         <>
           <Separator />
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-              Certifications & Set-Asides
+              Certifications &amp; Set-Asides
             </p>
             <div className="flex flex-wrap gap-1.5">
-              {activeDiversity.map((f) => (
-                <Badge key={f.key} variant={f.variant} className="text-xs">
-                  {f.label}
+              {allBadges.map((b) => (
+                <Badge key={b.label} variant={b.variant} className="text-xs">
+                  {b.label}
                 </Badge>
               ))}
             </div>
