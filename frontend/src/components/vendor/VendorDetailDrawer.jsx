@@ -14,6 +14,7 @@ import VendorSpendChart from './VendorSpendChart';
 import VendorAgencyChart from './VendorAgencyChart';
 import VendorCompetitionChart from './VendorCompetitionChart';
 import VendorAwardsTable from './VendorAwardsTable';
+import VendorAvgContractSize from './VendorAvgContractSize';
 import { getVendor, getVendorSummary, getWinRate } from '@/services/vendors';
 
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -130,6 +131,16 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
                 <Separator />
                 <Section title="Spend by Fiscal Year">
                   <VendorSpendChart data={spendByYear} />
+                </Section>
+              </>
+            )}
+
+            {/* Avg contract size */}
+            {spendByYear.length > 1 && (
+              <>
+                <Separator />
+                <Section title="Avg Contract Size by Year">
+                  <VendorAvgContractSize data={spendByYear} />
                 </Section>
               </>
             )}
