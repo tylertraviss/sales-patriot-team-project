@@ -77,12 +77,16 @@ const SheetTitle = React.forwardRef(({ className, ...props }, ref) => (
 ));
 SheetTitle.displayName = DialogPrimitive.Title.displayName;
 
+// Renders as a <div> (via asChild) to avoid invalid DOM nesting when
+// block-level elements like Badge are placed inside the description.
 const SheetDescription = React.forwardRef(({ className, ...props }, ref) => (
-  <DialogPrimitive.Description
-    ref={ref}
-    className={cn('text-sm text-muted-foreground', className)}
-    {...props}
-  />
+  <DialogPrimitive.Description asChild>
+    <div
+      ref={ref}
+      className={cn('text-sm text-muted-foreground', className)}
+      {...props}
+    />
+  </DialogPrimitive.Description>
 ));
 SheetDescription.displayName = DialogPrimitive.Description.displayName;
 

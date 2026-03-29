@@ -31,9 +31,12 @@ const COORDS = {
 };
 
 function resolveCoords(vendor) {
-  const cityKey = `${vendor.city?.toUpperCase()}_${vendor.stateCode?.toUpperCase()}`;
+  // Support both snake_case (backend) and camelCase (mock)
+  const state   = vendor.state_code  ?? vendor.stateCode;
+  const city    = vendor.city;
+  const cityKey = `${city?.toUpperCase()}_${state?.toUpperCase()}`;
   if (COORDS[cityKey]) return COORDS[cityKey];
-  if (COORDS[vendor.stateCode?.toUpperCase()]) return COORDS[vendor.stateCode.toUpperCase()];
+  if (state && COORDS[state.toUpperCase()]) return COORDS[state.toUpperCase()];
   return null;
 }
 
@@ -69,7 +72,7 @@ export default function VendorGlobe({ vendors = [], onVendorClick }) {
     })
     .filter(Boolean);
 
-  const maxObligated = Math.max(...points.map((p) => p.totalObligated ?? 0), 1);
+  const maxObligated = Math.max(...points.map((p) => Number(p.total_obligated ?? p.totalObligated ?? 0)), 1);
 
   // Responsive sizing
   useEffect(() => {
@@ -129,8 +132,8 @@ export default function VendorGlobe({ vendors = [], onVendorClick }) {
         pointsData={points}
         pointLat="lat"
         pointLng="lng"
-        pointAltitude={(d) => pinAltitude(d.totalObligated, maxObligated)}
-        pointRadius={(d) => pinRadius(d.totalObligated, maxObligated)}
+        pointAltitude={(d) => pinAltitude(Number(d.total_obligated ?? d.totalObligated ?? 0), maxObligated)}
+        pointRadius={(d) => pinRadius(Number(d.total_obligated ?? d.totalObligated ?? 0), maxObligated)}
         pointColor={() => 'rgba(96, 165, 250, 0.92)'}  // blue-400
         pointResolution={12}
         pointsMerge={false}
@@ -163,13 +166,18 @@ export default function VendorGlobe({ vendors = [], onVendorClick }) {
           style={{ left: tooltipPos.x + 18, top: tooltipPos.y - 60 }}
         >
           <div className="rounded-lg border border-white/10 bg-gray-900/95 backdrop-blur px-3 py-2 shadow-xl text-xs text-white space-y-0.5 max-w-[220px]">
-            <p className="font-semibold text-white leading-snug">{hovered.vendorName}</p>
-            <p className="text-blue-300">{hovered.city}{hovered.stateCode ? `, ${hovered.stateCode}` : ''}</p>
+            <p className="font-semibold text-white leading-snug">{hovered.name ?? hovered.vendorName}</p>
+            <p className="text-blue-300">
+              {hovered.city}
+              {(hovered.state_code ?? hovered.stateCode) ? `, ${hovered.state_code ?? hovered.stateCode}` : ''}
+            </p>
             <p className="text-white/70">
-              <span className="font-medium text-white">{fmt.format(hovered.totalObligated ?? 0)}</span>
+              <span className="font-medium text-white">
+                {fmt.format(Number(hovered.total_obligated ?? hovered.totalObligated ?? 0))}
+              </span>
               {' '}obligated
             </p>
-            <p className="text-white/50">{hovered.awardCount} award{hovered.awardCount !== 1 ? 's' : ''}</p>
+            <p className="text-white/50">{hovered.award_count ?? hovered.awardCount} award{(hovered.award_count ?? hovered.awardCount) !== 1 ? 's' : ''}</p>
             <p className="text-white/30 text-[10px] pt-0.5">Click to open details</p>
           </div>
         </div>
