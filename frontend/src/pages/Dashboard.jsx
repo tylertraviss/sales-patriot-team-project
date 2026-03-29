@@ -2,6 +2,10 @@ import { useState } from 'react';
 import AwardsTable from '../components/AwardsTable';
 import CompanySearch from '../components/CompanySearch';
 import TopEarners from '../components/TopEarners';
+import SpendingByState from '../components/SpendingByState';
+import TopNaics from '../components/TopNaics';
+import CompetedOverTime from '../components/CompetedOverTime';
+import AwardTypeBreakdown from '../components/AwardTypeBreakdown';
 
 export default function Dashboard() {
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -34,6 +38,14 @@ export default function Dashboard() {
 
       {/* Top earners insight card */}
       <TopEarners />
+
+      {/* 2-column chart grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <SpendingByState />
+        <AwardTypeBreakdown />
+        <TopNaics />
+        <CompetedOverTime />
+      </div>
 
       {/* Awards table */}
       <AwardsTable cageCode={selectedCompany?.cage_code ?? null} />
