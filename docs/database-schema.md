@@ -74,19 +74,19 @@ Recommended award identity priority for loaders:
 
 That should become `award_transactions.award_key`.
 
-### 3. Compatibility layer
+### 3. Read model
 
-Tables:
+Views:
 
-- `companies`
-- `awards`
+- `vendor_year_metrics`
+- `vendor_investment_summary`
+- `cage_code_investment_summary`
 
 Purpose:
 
-- preserve the existing frontend/backend demo contract
-- keep the current `/api/companies` and `/api/awards` flow usable while the team migrates to the core analytics model
-
-These tables are not the system of record for the real dataset. They are a lightweight compatibility surface.
+- keep investor-facing queries fast and opinionated
+- expose ranking and trend fields without asking the frontend to aggregate raw awards
+- let the current browse routes read from the same source of truth as the investment APIs
 
 ## Investment-oriented views
 
@@ -114,26 +114,34 @@ They aggregate vendor performance into fields the backend can rank on:
 
 ## Recommended ingest workflow
 
-For the full USB dataset, do not load row-by-row through Express inserts. Use this flow instead:
+For the full USB dataset, use the disk importer rather than row-by-row browser uploads. The project now supports both API upload for smaller files and direct CSV import for local/USB datasets.
+
+Recommended flow:
 
 1. Register the file in `ingest_files`.
-2. Stream the CSV into `raw_award_rows` in batches, ideally with `COPY`.
+2. Stream the CSV into `raw_award_rows` in batches.
 3. Upsert `vendor_entities` from the raw payload.
 4. Upsert `naics_codes` and `product_service_codes`.
 5. Upsert `award_transactions`.
-6. Optionally refresh the compatibility layer used by the current UI.
+6. Query `vendor_investment_summary` or `cage_code_investment_summary` for company rankings.
 
 Why:
 
 - several files are over `1 GB`
 - overlapping export windows appear on the USB
-- row-by-row HTTP inserts will be too slow and too hard to deduplicate reliably
+- row-by-row HTTP uploads will be too slow and too hard to deduplicate reliably
+
+Available import commands from `backend/`:
+
+- `npm run db:init`
+- `npm run db:import -- ../data`
+- `npm run db:import -- /Volumes/USB`
 
 ## What this means for the team
 
 - Backend can query `vendor_investment_summary` or `cage_code_investment_summary` for rankings.
-- Frontend can keep using the current endpoints for now.
-- Database work can proceed independently from frontend polish because the compatibility layer stays in place.
+- The existing `/api/companies` and `/api/awards` routes now read from the core tables/views instead of demo-only tables.
+- Frontend and backend can align on investment endpoints without carrying a second storage model.
 
 ## Drizzle setup
 

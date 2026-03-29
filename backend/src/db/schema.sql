@@ -1,8 +1,8 @@
 -- DLA Awards Database Schema
 --
 -- Design goals:
--- 1. Keep the current app's lightweight companies/awards tables working.
--- 2. Add a durable ingest + analytics model for the real 660-column CSV exports.
+-- 1. Make the ingest + analytics model the only source of truth.
+-- 2. Support the real 660-column CSV exports from local disk or API upload.
 -- 3. Make "which CAGE code should I invest in?" queries cheap by pre-shaping
 --    vendor- and year-level views over the fact data.
 
@@ -251,55 +251,6 @@ CREATE INDEX IF NOT EXISTS idx_award_transactions_amount
 
 CREATE INDEX IF NOT EXISTS idx_award_transactions_extra_attributes
   ON award_transactions USING GIN (extra_attributes jsonb_path_ops);
-
--- ---------------------------------------------------------------------------
--- Compatibility tables for the current app
--- ---------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS companies (
-  cage_code     VARCHAR(10)  PRIMARY KEY,
-  company_name  VARCHAR(500) NOT NULL,
-  vendor_id     UUID         REFERENCES vendor_entities(vendor_id) ON DELETE SET NULL,
-  uei           VARCHAR(20),
-  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_companies_name_tsv
-  ON companies USING GIN (to_tsvector('english', company_name));
-
-CREATE INDEX IF NOT EXISTS idx_companies_name_trgm
-  ON companies USING GIN (company_name gin_trgm_ops);
-
-DROP TRIGGER IF EXISTS trg_companies_set_updated_at ON companies;
-CREATE TRIGGER trg_companies_set_updated_at
-BEFORE UPDATE ON companies
-FOR EACH ROW
-EXECUTE FUNCTION set_updated_at();
-
-CREATE TABLE IF NOT EXISTS awards (
-  id              UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
-  award_tx_id     UUID         REFERENCES award_transactions(award_tx_id) ON DELETE SET NULL,
-  cage_code       VARCHAR(10)  NOT NULL REFERENCES companies(cage_code) ON DELETE CASCADE,
-  award_amount    NUMERIC(18, 2),
-  award_date      DATE,
-  contract_number VARCHAR(100),
-  description     TEXT,
-  dla_office      VARCHAR(200),
-  created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_awards_cage_code
-  ON awards(cage_code);
-
-CREATE INDEX IF NOT EXISTS idx_awards_award_date
-  ON awards(award_date DESC);
-
-CREATE INDEX IF NOT EXISTS idx_awards_dla_office
-  ON awards(dla_office);
-
-CREATE INDEX IF NOT EXISTS idx_awards_amount
-  ON awards(award_amount DESC);
 
 -- ---------------------------------------------------------------------------
 -- Analytics views

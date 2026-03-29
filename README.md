@@ -27,10 +27,15 @@ cd .. && docker compose up postgres -d
 # 4. Initialize the database schema
 cd backend && npm run db:init
 
-# 5. Start backend (new terminal)
+# 5. Load a sample file or the mounted USB data (optional but recommended)
+npm run db:import -- ../data/awards_20100314_20100314.csv
+# or
+npm run db:import -- /Volumes/USB
+
+# 6. Start backend (new terminal)
 npm run dev
 
-# 6. Start frontend (new terminal)
+# 7. Start frontend (new terminal)
 cd ../frontend && npm run dev
 ```
 
@@ -47,7 +52,7 @@ cd ../frontend && npm run dev
 | Database | PostgreSQL |
 | Frontend | React + Vite + TypeScript |
 | UI Components | shadcn/ui + Tailwind CSS |
-| File Uploads | Multer (CSV streaming to DB) |
+| File Uploads | Multer + batch CSV importer |
 | Logging | Winston |
 | CI | GitHub Actions |
 | Infrastructure | Docker Compose |
@@ -56,75 +61,43 @@ cd ../frontend && npm run dev
 
 ## API Reference
 
-### Vendors
+### Health
 
 ```
-GET /api/vendors
+GET /health
+```
+
+### Companies
+
+```
+GET /api/companies
   ?page=1&limit=25
-  ?sort=totalObligated&order=desc
-  ?year=2010
-  ?naicsCode=517110
-  ?stateCode=VA
-  ?agencyCode=9700
-  ?setAsideType=SBA
   ?search=indyne
 
-GET /api/vendors/:uei
-GET /api/vendors/:uei/awards
-  ?page=1&limit=25
-  ?sort=dollarsObligated&order=desc
-  ?year=2010
-  ?agencyCode=9700
-  ?awardType=DEFINITIVE+CONTRACT
-
-GET /api/vendors/:uei/awards/summary
+GET /api/companies/:cageCode
 ```
 
 ### Awards
 
 ```
+GET /api/awards/headers
+
 GET /api/awards
   ?page=1&limit=25
-  ?sort=dollarsObligated&order=desc
-  ?year=2010
-  ?agencyCode=9700
-  ?naicsCode=517110
-  ?stateCode=CA
-  ?awardType=DEFINITIVE+CONTRACT
-  ?extentCompeted=D
-  ?search=communications
+  ?sortBy=award_amount
+  ?sortDir=desc
+  ?cageCode=07MU1
+
+GET /api/awards/:cageCode
+  ?page=1&limit=25
+  ?sortBy=award_date
+  ?sortDir=desc
 ```
 
-### Agencies
+### Imports
 
 ```
-GET /api/agencies
-  ?page=1&limit=25
-  ?sort=name&order=asc
-
-GET /api/agencies/:code/awards
-  ?page=1&limit=25
-  ?sort=dollarsObligated&order=desc
-  ?year=2010
-
-GET /api/agencies/:code/vendors
-  ?page=1&limit=25
-  ?sort=totalObligated&order=desc
-```
-
-### NAICS
-
-```
-GET /api/naics
-  ?page=1&limit=25
-  ?sort=totalObligated&order=desc
-
-GET /api/naics/:code/awards
-  ?page=1&limit=25
-  ?year=2010
-
-GET /api/naics/:code/vendors
-  ?page=1&limit=25
+POST /api/upload
 ```
 
 ### Pagination Envelope
@@ -150,6 +123,8 @@ Every paginated endpoint returns:
 Database design notes for the real CSV exports are in [docs/database-schema.md](./docs/database-schema.md).
 
 Backend Drizzle setup lives in `backend/drizzle.config.mjs` with runtime schema/client files under `backend/src/db/drizzle/`.
+
+The database source of truth is `backend/src/db/schema.sql`. The current read routes query `award_transactions`, `vendor_entities`, and the investment summary views directly.
 
 ---
 

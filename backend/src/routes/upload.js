@@ -5,6 +5,7 @@ const stream   = require('stream');
 const router   = express.Router();
 const db       = require('../db/connection');
 const logger   = require('../logger');
+const { ingestUploadedAwards } = require('../db/importers/awardsIngest');
 
 // Store uploaded files in memory as a buffer (streaming immediately to DB).
 // For very large files the team may switch to disk storage via multer.diskStorage.
@@ -20,22 +21,6 @@ const upload = multer({
   },
 });
 
-/**
- * Maps a raw CSV row object to the DB columns we care about.
- * Adjust the field name aliases here to match the actual DLA export format.
- */
-function mapRow(row) {
-  return {
-    cage_code:       (row['CAGE Code']       || row['cage_code']       || '').trim().toUpperCase(),
-    company_name:    (row['Company Name']    || row['company_name']    || '').trim(),
-    contract_number: (row['Contract Number'] || row['contract_number'] || '').trim(),
-    award_amount:    parseFloat(row['Award Amount'] || row['award_amount'] || '0') || 0,
-    award_date:      row['Award Date']  || row['award_date']  || null,
-    dla_office:      (row['DLA Office'] || row['dla_office'] || '').trim(),
-    description:     (row['Description']     || row['description']     || '').trim(),
-  };
-}
-
 // POST /api/upload
 router.post('/', upload.single('file'), async (req, res, next) => {
   if (!req.file) {
@@ -50,13 +35,10 @@ router.post('/', upload.single('file'), async (req, res, next) => {
 
   const uploadStart = Date.now();
   const client = await db.getClient();
+  let ingestFileId = null;
 
   try {
     await client.query('BEGIN');
-
-    let inserted   = 0;
-    let skipped    = 0;
-    const errors   = [];
 
     const rows = await new Promise((resolve, reject) => {
       const results = [];
@@ -69,75 +51,75 @@ router.post('/', upload.single('file'), async (req, res, next) => {
         .on('error', reject);
     });
 
-    for (const raw of rows) {
-      const row = mapRow(raw);
-
-      if (!row.cage_code) {
-        skipped++;
-        errors.push({ row: raw, reason: 'Missing CAGE code' });
-        continue;
-      }
-
-      if (!row.cage_code) {
-        logger.debug('row skipped: missing CAGE code', { requestId: req.id, row: raw });
-      }
-
-      try {
-        // Upsert company
-        await client.query(
-          `INSERT INTO companies (cage_code, company_name)
-           VALUES ($1, $2)
-           ON CONFLICT (cage_code) DO UPDATE
-             SET company_name = EXCLUDED.company_name`,
-          [row.cage_code, row.company_name || 'Unknown'],
-        );
-
-        // Insert award
-        await client.query(
-          `INSERT INTO awards
-             (cage_code, award_amount, award_date, contract_number, description, dla_office)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [
-            row.cage_code,
-            row.award_amount || null,
-            row.award_date   || null,
-            row.contract_number || null,
-            row.description  || null,
-            row.dla_office   || null,
-          ],
-        );
-
-        inserted++;
-      } catch (rowErr) {
-        skipped++;
-        errors.push({ row: raw, reason: rowErr.message });
-        logger.warn('row insert failed', { requestId: req.id, reason: rowErr.message, cageCode: row.cage_code });
-      }
-    }
+    const stats = await ingestUploadedAwards(client, {
+      fileName: req.file.originalname,
+      fileSizeBytes: req.file.size,
+      rows,
+    });
+    ingestFileId = stats.ingestFileId;
 
     await client.query('COMMIT');
 
     const duration = Date.now() - uploadStart;
     logger.info('upload complete', {
       requestId:  req.id,
+      ingestFileId,
       filename:   req.file.originalname,
-      total:      rows.length,
-      inserted,
-      skipped,
+      total:      stats.total,
+      inserted:   stats.inserted,
+      skipped:    stats.skipped,
       durationMs: duration,
     });
 
     res.json({
       message:  'Upload complete',
-      inserted,
-      skipped,
-      total:    rows.length,
-      errors:   errors.slice(0, 50),
+      ingestFileId,
+      inserted: stats.inserted,
+      skipped:  stats.skipped,
+      total:    stats.total,
+      errors:   stats.errors.slice(0, 50),
     });
   } catch (err) {
     await client.query('ROLLBACK');
+    try {
+      await db.query(
+        `INSERT INTO ingest_files (
+           ingest_file_id,
+           file_name,
+           file_size_bytes,
+           row_count,
+           load_status,
+           metadata
+         )
+         VALUES (
+           COALESCE($1, uuid_generate_v4()),
+           $2,
+           $3,
+           0,
+           'failed',
+           $4::jsonb
+         )
+         ON CONFLICT (file_name) DO UPDATE
+           SET load_status = 'failed',
+               metadata = ingest_files.metadata || EXCLUDED.metadata`,
+        [
+          ingestFileId,
+          req.file?.originalname || 'unknown-upload.csv',
+          req.file?.size || null,
+          JSON.stringify({ error: err.message, requestId: req.id }),
+        ],
+      );
+    } catch (markFailedErr) {
+      logger.error('failed to mark ingest file as failed', {
+        requestId: req.id,
+        ingestFileId,
+        error: markFailedErr.message,
+      });
+    }
+
     logger.error('upload failed, transaction rolled back', {
       requestId: req.id,
+      ingestFileId,
       filename:  req.file?.originalname,
       error:     err.message,
     });
