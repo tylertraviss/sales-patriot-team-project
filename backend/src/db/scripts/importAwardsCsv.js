@@ -278,12 +278,20 @@ async function main() {
   );
 }
 
-main()
-  .catch((error) => {
-    logger.error('disk import failed', { error: error.message, stack: error.stack });
-    console.error(error.message);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await db.pool.end();
-  });
+if (require.main === module) {
+  main()
+    .catch((error) => {
+      logger.error('disk import failed', { error: error.message, stack: error.stack });
+      console.error(error.message);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await db.pool.end();
+    });
+}
+
+module.exports = {
+  DEFAULT_BATCH_SIZE,
+  importCsvFile,
+  listCsvFiles,
+};
