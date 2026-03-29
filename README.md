@@ -59,27 +59,21 @@ cd ../frontend && npm run dev
 
 ---
 
-## API Reference
+## API
 
-### Health
+Full API design is documented in [API.md](./API.md).
 
-```
+Current implemented backend routes:
+
+```text
 GET /health
-```
 
-### Companies
-
-```
 GET /api/companies
   ?page=1&limit=25
   ?search=indyne
 
 GET /api/companies/:cageCode
-```
 
-### Awards
-
-```
 GET /api/awards/headers
 
 GET /api/awards
@@ -92,28 +86,8 @@ GET /api/awards/:cageCode
   ?page=1&limit=25
   ?sortBy=award_date
   ?sortDir=desc
-```
 
-### Imports
-
-```
 POST /api/upload
-```
-
-### Pagination Envelope
-
-Every paginated endpoint returns:
-
-```json
-{
-  "data": [...],
-  "pagination": {
-    "page": 1,
-    "limit": 25,
-    "total": 84201,
-    "totalPages": 3369
-  }
-}
 ```
 
 ---
