@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const fmtCurrency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
 const fmtNumber   = new Intl.NumberFormat('en-US');
@@ -10,17 +10,17 @@ export default function KPIBanner() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${BASE_URL}/analytics/kpi`)
+    fetch(`${BASE_URL}/dashboard/kpis`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data) setKpi(data); })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const totalObligated = kpi ? fmtCurrency.format(kpi.totalObligated) : '$1.61B';
-  const totalAwards    = kpi ? fmtNumber.format(kpi.totalAwards)      : '4,116';
-  const totalVendors   = kpi ? fmtNumber.format(kpi.totalVendors)     : '2,379';
-  const soleSourcePct  = kpi ? `${kpi.soleSourcePct}%`                : '8.4%';
+  const totalObligated = kpi ? fmtCurrency.format(kpi.total_obligated ?? kpi.totalObligated) : '—';
+  const totalAwards    = kpi ? fmtNumber.format(kpi.total_awards ?? kpi.totalAwards)         : '—';
+  const totalVendors   = kpi ? fmtNumber.format(kpi.total_vendors ?? kpi.totalVendors)       : '—';
+  const soleSourcePct  = kpi ? `${kpi.sole_source_rate ?? kpi.soleSourcePct}%`               : '—';
 
   const KPIs = [
     { label: 'Total Obligated',  value: totalObligated },

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 function fmt(n) {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
@@ -20,13 +20,13 @@ export default function TopNaics() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${BASE_URL}/naics?sort=total_obligated&order=desc&limit=8`)
+    fetch(`${BASE_URL}/dashboard/by-naics`)
       .then((r) => r.ok ? r.json() : { data: [] })
       .then((json) => {
         setData((json.data ?? []).map((row) => ({
           code:  row.code,
           name:  row.name ?? row.code,
-          total: parseFloat(row.totalObligated) || 0,
+          total: parseFloat(row.total_obligated) || 0,
         })));
       })
       .catch(() => {})

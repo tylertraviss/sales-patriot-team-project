@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe', '#e0f2fe', '#f0f9ff', '#f8fafc', '#f1f5f9', '#e2e8f0'];
 
@@ -16,12 +16,12 @@ export default function SpendingByState() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${BASE_URL}/analytics/geographic-clustering?limit=10`)
+    fetch(`${BASE_URL}/dashboard/by-state`)
       .then((r) => r.ok ? r.json() : { data: [] })
       .then((json) => {
-        const rows = (json.data ?? []).slice(0, 10).map((s) => ({
-          state: s.stateCode,
-          total: parseFloat(s.totalObligated) || 0,
+        const rows = (json.data ?? []).map((s) => ({
+          state: s.state,
+          total: parseFloat(s.total_obligated) || 0,
         }));
         setData(rows);
       })

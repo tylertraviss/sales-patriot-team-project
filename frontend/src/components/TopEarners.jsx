@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const YEARS       = ['', '2010', '2011', '2012', '2013', '2014', '2015', '2016', '2017', '2018', '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026'];
 const AWARD_TYPES = ['', 'DEFINITIVE CONTRACT', 'DELIVERY ORDER', 'PURCHASE ORDER', 'BPA CALL'];
@@ -24,7 +24,7 @@ function FilterSelect({ label, value, onChange, options, labelMap }) {
         onChange={(e) => onChange(e.target.value)}
         className="text-xs text-gray-500 bg-transparent border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:border-gray-400 cursor-pointer"
       >
-        {options.map((o) => <option key={o} value={o}>{labelMap ? (labelMap[o] ?? o || 'All') : (o || 'All')}</option>)}
+        {options.map((o) => <option key={o} value={o}>{labelMap ? (labelMap[o] ?? (o || 'All')) : (o || 'All')}</option>)}
       </select>
     </div>
   );
@@ -51,16 +51,13 @@ export default function TopEarners() {
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams();
-    params.set('sort', 'total_obligated');
-    params.set('order', 'desc');
-    params.set('limit', '10');
-    if (year)          params.set('year', year);
-    if (awardType)     params.set('award_type', awardType);
-    if (extentCompeted) params.set('extent_competed', extentCompeted);
+    if (year)           params.set('year', year);
+    if (awardType)      params.set('awardType', awardType);
+    if (extentCompeted) params.set('extentCompeted', extentCompeted);
 
-    fetch(`${BASE_URL}/vendors?${params.toString()}`)
+    fetch(`${BASE_URL}/dashboard/top-earners?${params.toString()}`)
       .then((r) => r.ok ? r.json() : { data: [] })
-      .then((json) => setData(json.data ?? []))
+      .then((json) => setData((json.data ?? []).map((r) => ({ ...r, name: r.vendor_name, totalObligated: parseFloat(r.total_obligated) || 0 }))))
       .catch(() => setData([]))
       .finally(() => setLoading(false));
   }, [year, awardType, extentCompeted]);

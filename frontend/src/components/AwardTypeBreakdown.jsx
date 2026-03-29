@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const COLORS = ['#3b82f6', '#60a5fa', '#bfdbfe', '#dbeafe'];
 
@@ -30,45 +30,11 @@ export default function AwardTypeBreakdown() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Use /api/awards with page=1 limit=1 grouped by type — we need aggregation.
-    // The analytics sector-heatmap doesn't group by award type, so we hit /api/awards
-    // with each award_type and collect totals via the analytics/kpi-adjacent approach.
-    // Best available: fetch top awards and group client-side from the paginated endpoint.
-    // For a proper aggregation we use the naics endpoint as a proxy — but the cleanest
-    // approach given the current API is to hit /api/awards with each award_type.
-    // Instead we use a small set of known types and fetch counts in parallel.
-    const TYPES = [
-      'DEFINITIVE CONTRACT',
-      'DELIVERY ORDER',
-      'PURCHASE ORDER',
-      'BPA CALL',
-    ];
-
-    Promise.all(
-      TYPES.map((t) =>
-        fetch(`${BASE_URL}/awards?award_type=${encodeURIComponent(t)}&limit=1`)
-          .then((r) => r.ok ? r.json() : { data: [], pagination: { total: 0 } })
-          .catch(() => ({ data: [], pagination: { total: 0 } }))
-      )
-    ).then((results) => {
-      // We need total obligated per type — fetch a larger sample and sum
-      // Since /api/awards doesn't provide aggregated totals, fetch top 100 per type
-      return Promise.all(
-        TYPES.map((t, i) => {
-          const total = results[i]?.pagination?.total ?? 0;
-          if (total === 0) return Promise.resolve({ name: t, value: 0 });
-          return fetch(`${BASE_URL}/awards?award_type=${encodeURIComponent(t)}&limit=100&sort=award_amount&order=desc`)
-            .then((r) => r.ok ? r.json() : { data: [] })
-            .then((json) => ({
-              name: t.charAt(0) + t.slice(1).toLowerCase(),
-              value: (json.data ?? []).reduce((s, row) => s + (parseFloat(row.dollarsObligated) || 0), 0),
-            }))
-            .catch(() => ({ name: t, value: 0 }));
-        })
-      );
-    }).then((rows) => {
-      setData(rows.filter((r) => r.value > 0));
-    }).catch(() => {}).finally(() => setLoading(false));
+    fetch(`${BASE_URL}/dashboard/by-type`)
+      .then((r) => r.ok ? r.json() : { data: [] })
+      .then((json) => setData(json.data ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const total = data.reduce((s, d) => s + d.value, 0);
