@@ -1,8 +1,10 @@
-const express = require('express');
+const express  = require('express');
+const router    = express.Router();
+const db        = require('../db/connection');
+const logger    = require('../logger');
+const { paginate, fiscalYearExpr } = require('../utils/queryHelpers');
 
-const router = express.Router();
-const db = require('../db/connection');
-
+// Maps public API sort param names → internal SQL column keys
 const SORT_KEY_MAP = {
   name: 'name',
   annual_revenue: 'annual_revenue',
@@ -14,12 +16,6 @@ const SORT_KEY_MAP = {
   award_count: 'award_count',
   awardCount: 'award_count',
 };
-
-function paginate(page, limit) {
-  const p = Math.max(1, Number.parseInt(page, 10) || 1);
-  const l = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 25));
-  return { page: p, limit: l, offset: (p - 1) * l };
-}
 
 function toSortCol(sort) {
   const map = {
@@ -33,10 +29,11 @@ function toSortCol(sort) {
   return map[sort] || map.total_obligated;
 }
 
-function fiscalYearExpr(alias = 'a') {
-  return `COALESCE(${alias}.award_fiscal_year, ${alias}.contract_fiscal_year, EXTRACT(YEAR FROM COALESCE(${alias}.award_date, ${alias}.date_signed, ${alias}.reveal_date))::INT)`;
-}
-
+/**
+ * Builds an EXISTS subquery that filters vendors to only those with at least
+ * one award matching the supplied filter params (naics, agency, set-aside, year).
+ * Pushes new bind values onto the shared `values` array and returns the SQL clause.
+ */
 function buildVendorAwardExistence(query, { vendorAlias = 'v', values = [] } = {}) {
   const conditions = [`a.vendor_id = ${vendorAlias}.vendor_id`];
 
