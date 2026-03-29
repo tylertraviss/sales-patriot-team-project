@@ -3,7 +3,6 @@ import AwardTypeBreakdown from '../components/AwardTypeBreakdown';
 import TopNaics from '../components/TopNaics';
 import SpendingByState from '../components/SpendingByState';
 import TopEarners from '../components/TopEarners';
-import CompanyGraph from '../components/CompanyGraph';
 import AwardsTable from '../components/AwardsTable';
 
 export default function Dashboard() {
@@ -21,9 +20,6 @@ export default function Dashboard() {
         <TopNaics />
         <SpendingByState />
       </div>
-
-      {/* Company graph — full width */}
-      <CompanyGraph />
 
       {/* Awards table */}
       <AwardsTable cageCode={null} />

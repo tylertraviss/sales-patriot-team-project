@@ -1510,5 +1510,2329 @@
         "fiscalYear": ""
       }
     ]
+  },
+  "naicsGraph": {
+    "nodes": [
+      {
+        "id": "naics_541330",
+        "label": "ENGINEERING SERVICES",
+        "shortLabel": "541330",
+        "type": "naics",
+        "naicsCode": "541330",
+        "vendorCount": 160,
+        "totalObligated": 902093576.0
+      },
+      {
+        "id": "naics_336413",
+        "label": "OTHER AIRCRAFT PARTS AND AUXILIARY EQUIPMENT MANUFACTURING",
+        "shortLabel": "336413",
+        "type": "naics",
+        "naicsCode": "336413",
+        "vendorCount": 105,
+        "totalObligated": 873493196.0
+      },
+      {
+        "id": "naics_541712",
+        "label": "RESEARCH AND DEVELOPMENT IN THE PHYSICAL, ENGINEERING, AND LIFE SCIENCES (EXCEPT BIOTECHNOLOGY)",
+        "shortLabel": "541712",
+        "type": "naics",
+        "naicsCode": "541712",
+        "vendorCount": 71,
+        "totalObligated": 78751687.0
+      },
+      {
+        "id": "naics_236220",
+        "label": "COMMERCIAL AND INSTITUTIONAL BUILDING CONSTRUCTION",
+        "shortLabel": "236220",
+        "type": "naics",
+        "naicsCode": "236220",
+        "vendorCount": 64,
+        "totalObligated": 31659296.0
+      },
+      {
+        "id": "naics_541710",
+        "label": "RESEARCH AND DEVELOPMENT IN THE PHYSICAL, ENGINEERING, AND LIFE SCIENCES",
+        "shortLabel": "541710",
+        "type": "naics",
+        "naicsCode": "541710",
+        "vendorCount": 53,
+        "totalObligated": 860692836.0
+      },
+      {
+        "id": "naics_336611",
+        "label": "SHIP BUILDING AND REPAIRING",
+        "shortLabel": "336611",
+        "type": "naics",
+        "naicsCode": "336611",
+        "vendorCount": 42,
+        "totalObligated": 14218016.0
+      },
+      {
+        "id": "naics_541519",
+        "label": "OTHER COMPUTER RELATED SERVICES",
+        "shortLabel": "541519",
+        "type": "naics",
+        "naicsCode": "541519",
+        "vendorCount": 40,
+        "totalObligated": 2663120.0
+      },
+      {
+        "id": "naics_561210",
+        "label": "FACILITIES SUPPORT SERVICES",
+        "shortLabel": "561210",
+        "type": "naics",
+        "naicsCode": "561210",
+        "vendorCount": 39,
+        "totalObligated": 56333338.0
+      },
+      {
+        "id": "vendor_CC&G COMPANY, LLC",
+        "label": "CC&G COMPANY, LLC",
+        "type": "vendor",
+        "uei": "DMMSQ47CJZ34",
+        "stateCode": "CO",
+        "totalObligated": 182120.0,
+        "awardCount": 3,
+        "avgOffersReceived": 9.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_IIT RESEARCH INSTITUTE",
+        "label": "IIT RESEARCH INSTITUTE",
+        "type": "vendor",
+        "uei": "DGBUFQYMKWB5",
+        "stateCode": "IL",
+        "totalObligated": 2296341.0,
+        "awardCount": 3,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_URSGI-BMDC, A JOINT VENTURE",
+        "label": "URSGI-BMDC, A JOINT VENTURE",
+        "type": "vendor",
+        "uei": "LWNDP9BFGF95",
+        "stateCode": "CA",
+        "totalObligated": 4493518.0,
+        "awardCount": 2,
+        "avgOffersReceived": 48.0,
+        "soleSourcePct": 0,
+        "competedPct": 50,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330"
+        ]
+      },
+      {
+        "id": "vendor_NORTHROP GRUMMAN INFORMATION TECHNOLOGY, INC.",
+        "label": "NORTHROP GRUMMAN INFORMATION TECHNOLOGY, INC.",
+        "type": "vendor",
+        "uei": "CVRDPLPAR5D3",
+        "stateCode": "VA",
+        "totalObligated": 1878331.0,
+        "awardCount": 2,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541712"
+        ]
+      },
+      {
+        "id": "vendor_BAE SYSTEMS NORFOLK SHIP REPAI",
+        "label": "BAE SYSTEMS NORFOLK SHIP REPAI",
+        "type": "vendor",
+        "uei": "ERMDZBE4J8Q9",
+        "stateCode": "VA",
+        "totalObligated": 678501.0,
+        "awardCount": 2,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_HONEYWELL TECHNOLOGY SOLUTIONS INCORPORATED",
+        "label": "HONEYWELL TECHNOLOGY SOLUTIONS INCORPORATED",
+        "type": "vendor",
+        "uei": "JU9GLKSCUXE3",
+        "stateCode": "MD",
+        "totalObligated": 8742879.0,
+        "awardCount": 2,
+        "avgOffersReceived": 5.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330"
+        ]
+      },
+      {
+        "id": "vendor_NORTHROP GRUMMAN SHIP SYSTEMS,",
+        "label": "NORTHROP GRUMMAN SHIP SYSTEMS,",
+        "type": "vendor",
+        "uei": "F19YS5JXPYH8",
+        "stateCode": "MS",
+        "totalObligated": 3677000.0,
+        "awardCount": 1,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_CAS SEVERN, INC.",
+        "label": "CAS SEVERN, INC.",
+        "type": "vendor",
+        "uei": "HMNQG2FZANL3",
+        "stateCode": "MD",
+        "totalObligated": 155053.0,
+        "awardCount": 1,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_BOOZ ALLEN  HAMILTON INC",
+        "label": "BOOZ ALLEN  HAMILTON INC",
+        "type": "vendor",
+        "uei": "JCBMLGPE6Z71",
+        "stateCode": "VA",
+        "totalObligated": 2984965.0,
+        "awardCount": 12,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_BAE SYSTEMS SAN DIEGO SHIP REPAIR INC",
+        "label": "BAE SYSTEMS SAN DIEGO SHIP REPAIR INC",
+        "type": "vendor",
+        "uei": "ZMBFGXHLGLM3",
+        "stateCode": "CA",
+        "totalObligated": 1758685.0,
+        "awardCount": 4,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_NEXTGEN AERONAUTICS, INC.",
+        "label": "NEXTGEN AERONAUTICS, INC.",
+        "type": "vendor",
+        "uei": "ZKMCL2QBEN46",
+        "stateCode": "CA",
+        "totalObligated": 494095.0,
+        "awardCount": 1,
+        "avgOffersReceived": 32.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "541712"
+        ]
+      },
+      {
+        "id": "vendor_WHITING-TURNER CONTRACTING COMPANY, THE",
+        "label": "WHITING-TURNER CONTRACTING COMPANY, THE",
+        "type": "vendor",
+        "uei": "VEP4UN7LDMK5",
+        "stateCode": "MD",
+        "totalObligated": 13139000.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_LOCKHEED MARTIN CORPORATION (3632)",
+        "label": "LOCKHEED MARTIN CORPORATION (3632)",
+        "type": "vendor",
+        "uei": "XFJMYSYFJEK4",
+        "stateCode": "TX",
+        "totalObligated": 1449336.0,
+        "awardCount": 2,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336413"
+        ]
+      },
+      {
+        "id": "vendor_NATIONAL STEEL AND SHIPBUILDING COMPANY",
+        "label": "NATIONAL STEEL AND SHIPBUILDING COMPANY",
+        "type": "vendor",
+        "uei": "Q85KVUK3JBF5",
+        "stateCode": "CA",
+        "totalObligated": 439858.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_ROLLS-ROYCE NAVAL MARINE INC",
+        "label": "ROLLS-ROYCE NAVAL MARINE INC",
+        "type": "vendor",
+        "uei": "HLVBPCA2LH41",
+        "stateCode": "MA",
+        "totalObligated": 210000.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 100,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_COMPUTER SCIENCES CORPORATION",
+        "label": "COMPUTER SCIENCES CORPORATION",
+        "type": "vendor",
+        "uei": "DCLWX76AVGZ4",
+        "stateCode": "AL",
+        "totalObligated": 7838461.0,
+        "awardCount": 9,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330",
+          "541712",
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_EARL INDUSTRIES, L.L.C.",
+        "label": "EARL INDUSTRIES, L.L.C.",
+        "type": "vendor",
+        "uei": "FLGJN5S5JPV5",
+        "stateCode": "VA",
+        "totalObligated": 261237.0,
+        "awardCount": 6,
+        "avgOffersReceived": 1.5,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_BAE SYSTEMS TECHNOLOGY SOLUTIONS & SERVICES INC.",
+        "label": "BAE SYSTEMS TECHNOLOGY SOLUTIONS & SERVICES INC.",
+        "type": "vendor",
+        "uei": "LX3BSV6NNW58",
+        "stateCode": "MD",
+        "totalObligated": 1750196.0,
+        "awardCount": 3,
+        "avgOffersReceived": 500.0,
+        "soleSourcePct": 0,
+        "competedPct": 67,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330",
+          "541712",
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_NORTHROP GRUMMAN DEFENSE MISSI",
+        "label": "NORTHROP GRUMMAN DEFENSE MISSI",
+        "type": "vendor",
+        "uei": "FXJVRWCS64T7",
+        "stateCode": "VA",
+        "totalObligated": 3576283.0,
+        "awardCount": 3,
+        "avgOffersReceived": 1.7,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330"
+        ]
+      },
+      {
+        "id": "vendor_DOMESTIC AWARDEES (UNDISCLOSED)",
+        "label": "DOMESTIC AWARDEES (UNDISCLOSED)",
+        "type": "vendor",
+        "uei": "KA5HQCLKUVW1",
+        "stateCode": "DC",
+        "totalObligated": 1049734.0,
+        "awardCount": 9,
+        "avgOffersReceived": 1.1,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_JACOBS GOVERNMENT SERVICES COMPANY",
+        "label": "JACOBS GOVERNMENT SERVICES COMPANY",
+        "type": "vendor",
+        "uei": "VAHLNMFFM5J2",
+        "stateCode": "CA",
+        "totalObligated": 76731.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_MR BOSNICK JOINT VENTURE INCORPORATED",
+        "label": "MR BOSNICK JOINT VENTURE INCORPORATED",
+        "type": "vendor",
+        "uei": "N36LFNM5BDJ4",
+        "stateCode": "WA",
+        "totalObligated": 77700.0,
+        "awardCount": 1,
+        "avgOffersReceived": 8.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_MISCELLANEOUS FOREIGN CONTRACTORS",
+        "label": "MISCELLANEOUS FOREIGN CONTRACTORS",
+        "type": "vendor",
+        "uei": "LN9PU5M2YZN5",
+        "stateCode": "VA",
+        "totalObligated": 6294133.0,
+        "awardCount": 126,
+        "avgOffersReceived": 2.2,
+        "soleSourcePct": 3,
+        "competedPct": 27,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336611",
+          "236220",
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "label": "NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "type": "vendor",
+        "uei": "JRVLDEXMYDK8",
+        "stateCode": "CA",
+        "totalObligated": 13257258.0,
+        "awardCount": 16,
+        "avgOffersReceived": 1.2,
+        "soleSourcePct": 44,
+        "competedPct": 6,
+        "competition": "mixed",
+        "naicsCodes": [
+          "541330",
+          "541712"
+        ]
+      },
+      {
+        "id": "vendor_MCTECH CORPORATION",
+        "label": "MCTECH CORPORATION",
+        "type": "vendor",
+        "uei": "ZGWJGUWXZEG8",
+        "stateCode": "KS",
+        "totalObligated": 89639.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_ALEUT GLOBAL SOLUTIONS LIMITED LIABILITY COMPANY",
+        "label": "ALEUT GLOBAL SOLUTIONS LIMITED LIABILITY COMPANY",
+        "type": "vendor",
+        "uei": "Y7KZVN5B74Q7",
+        "stateCode": "CO",
+        "totalObligated": 609406.0,
+        "awardCount": 1,
+        "avgOffersReceived": 6.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_DMD, L.L.C.",
+        "label": "DMD, L.L.C.",
+        "type": "vendor",
+        "uei": "HNK6ED5J3BN9",
+        "stateCode": "AL",
+        "totalObligated": 498900.0,
+        "awardCount": 4,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541712"
+        ]
+      },
+      {
+        "id": "vendor_MOOG INC.",
+        "label": "MOOG INC.",
+        "type": "vendor",
+        "uei": "L4ZMKLM4MPL3",
+        "stateCode": "NY",
+        "totalObligated": 9171750.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "336413"
+        ]
+      },
+      {
+        "id": "vendor_LB&B ASSOCIATES INC",
+        "label": "LB&B ASSOCIATES INC",
+        "type": "vendor",
+        "uei": "WAEABL9LRLJ5",
+        "stateCode": "MD",
+        "totalObligated": 970873.0,
+        "awardCount": 1,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "336413"
+        ]
+      },
+      {
+        "id": "vendor_DZSP 21 LLC",
+        "label": "DZSP 21 LLC",
+        "type": "vendor",
+        "uei": "VWDRE72J7AF3",
+        "stateCode": "PA",
+        "totalObligated": 252218.0,
+        "awardCount": 1,
+        "avgOffersReceived": 7.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_MICROSOFT CORPORATION SITZ IN REDMOND CORPORATION",
+        "label": "MICROSOFT CORPORATION SITZ IN REDMOND CORPORATION",
+        "type": "vendor",
+        "uei": "FMVPEWNJGLM1",
+        "stateCode": "WA",
+        "totalObligated": 49274.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 100,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_CALL HENRY INC",
+        "label": "CALL HENRY INC",
+        "type": "vendor",
+        "uei": "QJBXNMWFZBT3",
+        "stateCode": "FL",
+        "totalObligated": 186701.0,
+        "awardCount": 1,
+        "avgOffersReceived": 9.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_NATIONAL STEEL & SHIPBUILDING COMPANY",
+        "label": "NATIONAL STEEL & SHIPBUILDING COMPANY",
+        "type": "vendor",
+        "uei": "Q85KVUK3JBF5",
+        "stateCode": "CA",
+        "totalObligated": 133398.0,
+        "awardCount": 1,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_KNOWLEDGE SHARING SYSTEMS LIMITED LIABILITY COMPANY",
+        "label": "KNOWLEDGE SHARING SYSTEMS LIMITED LIABILITY COMPANY",
+        "type": "vendor",
+        "uei": "UNW6XJQN2U18",
+        "stateCode": "NC",
+        "totalObligated": 45000.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_CNI INFORMATION TECHNOLOGY LIMITED LIABILITY COMPANY",
+        "label": "CNI INFORMATION TECHNOLOGY LIMITED LIABILITY COMPANY",
+        "type": "vendor",
+        "uei": "FVJBR14EWD51",
+        "stateCode": "OK",
+        "totalObligated": 290850.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_AEROJET GENERAL CORPORATION",
+        "label": "AEROJET GENERAL CORPORATION",
+        "type": "vendor",
+        "uei": "CE87CA8WNWA1",
+        "stateCode": "VA",
+        "totalObligated": 785601.0,
+        "awardCount": 2,
+        "avgOffersReceived": 1.5,
+        "soleSourcePct": 0,
+        "competedPct": 50,
+        "competition": "competed",
+        "naicsCodes": [
+          "541712"
+        ]
+      },
+      {
+        "id": "vendor_STANLEY ASSOCIATES INCORPORATED",
+        "label": "STANLEY ASSOCIATES INCORPORATED",
+        "type": "vendor",
+        "uei": "NGLGJNNGNZF6",
+        "stateCode": "VA",
+        "totalObligated": 7175739.0,
+        "awardCount": 1,
+        "avgOffersReceived": 11.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_ELECTRONIC DATA SYSTEMS CORPORATION",
+        "label": "ELECTRONIC DATA SYSTEMS CORPORATION",
+        "type": "vendor",
+        "uei": "MBSRAWAQ9559",
+        "stateCode": "VA",
+        "totalObligated": 3537496.0,
+        "awardCount": 1,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541712"
+        ]
+      },
+      {
+        "id": "vendor_WEBCO",
+        "label": "WEBCO",
+        "type": "vendor",
+        "uei": "EMVWFLVNM2C7",
+        "stateCode": "CA",
+        "totalObligated": 287286.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 100,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_AM GENERAL, LLC",
+        "label": "AM GENERAL, LLC",
+        "type": "vendor",
+        "uei": "FR3PVZ8T9CS5",
+        "stateCode": "IN",
+        "totalObligated": 3577946.0,
+        "awardCount": 4,
+        "avgOffersReceived": 1.5,
+        "soleSourcePct": 25,
+        "competedPct": 50,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330"
+        ]
+      },
+      {
+        "id": "vendor_FCN INCORPORATED",
+        "label": "FCN INCORPORATED",
+        "type": "vendor",
+        "uei": "JEANDJTZ8HJ3",
+        "stateCode": "MD",
+        "totalObligated": 85415.0,
+        "awardCount": 1,
+        "avgOffersReceived": 7.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_BIOENGINEERING ARCADIS LIMITED LIABILITY COMPANY",
+        "label": "BIOENGINEERING ARCADIS LIMITED LIABILITY COMPANY",
+        "type": "vendor",
+        "uei": "DSCKT5GAHQX6",
+        "stateCode": "LA",
+        "totalObligated": 2602908.0,
+        "awardCount": 2,
+        "avgOffersReceived": 17.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330"
+        ]
+      },
+      {
+        "id": "vendor_TKC INTEGRATION SERVICES LIMITED LIABILITY COMPANY",
+        "label": "TKC INTEGRATION SERVICES LIMITED LIABILITY COMPANY",
+        "type": "vendor",
+        "uei": "M46UYYHVH4B1",
+        "stateCode": "AK",
+        "totalObligated": 177068.0,
+        "awardCount": 2,
+        "avgOffersReceived": 4.0,
+        "soleSourcePct": 50,
+        "competedPct": 50,
+        "competition": "sole",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_SUMITOMO HEAVY INDUSTRIES, LTD.",
+        "label": "SUMITOMO HEAVY INDUSTRIES, LTD.",
+        "type": "vendor",
+        "uei": "JZUMWWR4MAF7",
+        "stateCode": "",
+        "totalObligated": 78357.0,
+        "awardCount": 3,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_EPSILON SYSTEMS SOLUTION, INC.",
+        "label": "EPSILON SYSTEMS SOLUTION, INC.",
+        "type": "vendor",
+        "uei": "MYJHF1S2HGV5",
+        "stateCode": "CA",
+        "totalObligated": 136071.0,
+        "awardCount": 2,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_A BRDC JOINT VENTURE",
+        "label": "A BRDC JOINT VENTURE",
+        "type": "vendor",
+        "uei": "TSSKHE1MTK29",
+        "stateCode": "PA",
+        "totalObligated": 65000.0,
+        "awardCount": 1,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_LONGBOW LIMITED LIABILITY COMP",
+        "label": "LONGBOW LIMITED LIABILITY COMP",
+        "type": "vendor",
+        "uei": "NKALELNK6F48",
+        "stateCode": "FL",
+        "totalObligated": 9029044.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336413"
+        ]
+      },
+      {
+        "id": "vendor_NATIONAL STEEL & SHIPBUILDING",
+        "label": "NATIONAL STEEL & SHIPBUILDING",
+        "type": "vendor",
+        "uei": "Q85KVUK3JBF5",
+        "stateCode": "CA",
+        "totalObligated": 357006.0,
+        "awardCount": 2,
+        "avgOffersReceived": 2.5,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_GENERAL DYNAMICS INFORMATION TECHNOLOGY, INC.",
+        "label": "GENERAL DYNAMICS INFORMATION TECHNOLOGY, INC.",
+        "type": "vendor",
+        "uei": "SMNWM6HN79X5",
+        "stateCode": "VA",
+        "totalObligated": 492324.0,
+        "awardCount": 5,
+        "avgOffersReceived": 3.8,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330",
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_GENERAL ELECTRIC COMPANY",
+        "label": "GENERAL ELECTRIC COMPANY",
+        "type": "vendor",
+        "uei": "J1T1FEN3PWX6",
+        "stateCode": "OH",
+        "totalObligated": 1537422.0,
+        "awardCount": 18,
+        "avgOffersReceived": 8.8,
+        "soleSourcePct": 28,
+        "competedPct": 67,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330",
+          "541712",
+          "336413"
+        ]
+      },
+      {
+        "id": "vendor_MS TECHNOLOGY INCORPORATED (9648)",
+        "label": "MS TECHNOLOGY INCORPORATED (9648)",
+        "type": "vendor",
+        "uei": "DZD6LF51YF26",
+        "stateCode": "TN",
+        "totalObligated": 1258015.0,
+        "awardCount": 1,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_READINESS MANAGEMENT SUPPORT, L.C.",
+        "label": "READINESS MANAGEMENT SUPPORT, L.C.",
+        "type": "vendor",
+        "uei": "LDCNMEBNGMG4",
+        "stateCode": "FL",
+        "totalObligated": 4124560.0,
+        "awardCount": 1,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_BATTELLE MEMORIAL INSTITUTE",
+        "label": "BATTELLE MEMORIAL INSTITUTE",
+        "type": "vendor",
+        "uei": "F125YU6SWK59",
+        "stateCode": "OH",
+        "totalObligated": 401961.0,
+        "awardCount": 5,
+        "avgOffersReceived": 21.2,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_WYLE LABORATORIES, INC",
+        "label": "WYLE LABORATORIES, INC",
+        "type": "vendor",
+        "uei": "KNV8E5VRLHT9",
+        "stateCode": "AL",
+        "totalObligated": 7186463.0,
+        "awardCount": 7,
+        "avgOffersReceived": 1.9,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330",
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_L-3 COMMUNICATIONS CORPORATION",
+        "label": "L-3 COMMUNICATIONS CORPORATION",
+        "type": "vendor",
+        "uei": "ZVSWRLZC9757",
+        "stateCode": "KY",
+        "totalObligated": 11081659.0,
+        "awardCount": 50,
+        "avgOffersReceived": 1.2,
+        "soleSourcePct": 12,
+        "competedPct": 82,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330",
+          "336413",
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_R M VREDENBURG AND COMPANY",
+        "label": "R M VREDENBURG AND COMPANY",
+        "type": "vendor",
+        "uei": "MZ8KM9KPD5J9",
+        "stateCode": "VA",
+        "totalObligated": 129213.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_L 3 COMMUNICATIONS TITAN CORPORATION (8754)",
+        "label": "L 3 COMMUNICATIONS TITAN CORPORATION (8754)",
+        "type": "vendor",
+        "uei": "FJ1BNRX9ENM6",
+        "stateCode": "FL",
+        "totalObligated": 69038.0,
+        "awardCount": 4,
+        "avgOffersReceived": 4.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330",
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_BELL HELICOPTER TEXTRON INC.",
+        "label": "BELL HELICOPTER TEXTRON INC.",
+        "type": "vendor",
+        "uei": "N5QUZAYGPKM3",
+        "stateCode": "TX",
+        "totalObligated": 11111174.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 100,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "336413"
+        ]
+      },
+      {
+        "id": "vendor_ARROW KINSLEY JOINT VENTURE",
+        "label": "ARROW KINSLEY JOINT VENTURE",
+        "type": "vendor",
+        "uei": "F9QMCSF196J7",
+        "stateCode": "PA",
+        "totalObligated": 9105787.0,
+        "awardCount": 1,
+        "avgOffersReceived": 8.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_MCDONNELL DOUGLAS CORPORATION (0674)",
+        "label": "MCDONNELL DOUGLAS CORPORATION (0674)",
+        "type": "vendor",
+        "uei": "JJM4FRDZJDX1",
+        "stateCode": "MO",
+        "totalObligated": 1000000.0,
+        "awardCount": 2,
+        "avgOffersReceived": 4.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541712"
+        ]
+      },
+      {
+        "id": "vendor_THE BOEING COMPANY",
+        "label": "THE BOEING COMPANY",
+        "type": "vendor",
+        "uei": "E466BXU4KJH8",
+        "stateCode": "PA",
+        "totalObligated": 748940641.0,
+        "awardCount": 16,
+        "avgOffersReceived": 1.2,
+        "soleSourcePct": 56,
+        "competedPct": 19,
+        "competition": "sole",
+        "naicsCodes": [
+          "541330",
+          "336413",
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_CELLCO PARTNERSHIP DBA VERIZON WIRELESS",
+        "label": "CELLCO PARTNERSHIP DBA VERIZON WIRELESS",
+        "type": "vendor",
+        "uei": "CK77N4SCAJD3",
+        "stateCode": "NJ",
+        "totalObligated": 235802.0,
+        "awardCount": 9,
+        "avgOffersReceived": 6.3,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_COMPUTER SERVANTS INCORPORATED",
+        "label": "COMPUTER SERVANTS INCORPORATED",
+        "type": "vendor",
+        "uei": "NJJMJJ9K8XN7",
+        "stateCode": "FL",
+        "totalObligated": 2218181.0,
+        "awardCount": 1,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330"
+        ]
+      },
+      {
+        "id": "vendor_Q-MAX CONSTRUCTION COMPANY, INC.",
+        "label": "Q-MAX CONSTRUCTION COMPANY, INC.",
+        "type": "vendor",
+        "uei": "S1F4QN9HB2F7",
+        "stateCode": "CA",
+        "totalObligated": 92319.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 100,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_HONEYWELL INTERNATIONAL INC.",
+        "label": "HONEYWELL INTERNATIONAL INC.",
+        "type": "vendor",
+        "uei": "ZLHMCNLMEYK1",
+        "stateCode": "AZ",
+        "totalObligated": 513743.0,
+        "awardCount": 8,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 88,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "336413",
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_INTERNATIONAL BUSINESS MACHINE",
+        "label": "INTERNATIONAL BUSINESS MACHINE",
+        "type": "vendor",
+        "uei": "VV9KH3L99VE3",
+        "stateCode": "MD",
+        "totalObligated": 275881.0,
+        "awardCount": 3,
+        "avgOffersReceived": 4.3,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_MCDONNELL DOUGLAS CORPORATION",
+        "label": "MCDONNELL DOUGLAS CORPORATION",
+        "type": "vendor",
+        "uei": "N7N4W13PCRU5",
+        "stateCode": "MO",
+        "totalObligated": 2883008.0,
+        "awardCount": 7,
+        "avgOffersReceived": 1.9,
+        "soleSourcePct": 57,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "336413"
+        ]
+      },
+      {
+        "id": "vendor_EPSILON SYSTEMS SOLUTIONS INCORPORATED",
+        "label": "EPSILON SYSTEMS SOLUTIONS INCORPORATED",
+        "type": "vendor",
+        "uei": "MYJHF1S2HGV5",
+        "stateCode": "CA",
+        "totalObligated": 149000.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_WESTAR AEROSPACE & DEFENSE GROUP, INC.",
+        "label": "WESTAR AEROSPACE & DEFENSE GROUP, INC.",
+        "type": "vendor",
+        "uei": "P6VQV3T5ZTH4",
+        "stateCode": "AL",
+        "totalObligated": 1080966.0,
+        "awardCount": 1,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_INTERNATIONAL BUSINESS MACHINES CORPORATION",
+        "label": "INTERNATIONAL BUSINESS MACHINES CORPORATION",
+        "type": "vendor",
+        "uei": "VV9KH3L99VE3",
+        "stateCode": "MD",
+        "totalObligated": 121580.0,
+        "awardCount": 5,
+        "avgOffersReceived": 4.6,
+        "soleSourcePct": 0,
+        "competedPct": 60,
+        "competition": "competed",
+        "naicsCodes": [
+          "541712",
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_ITT CORPORATION",
+        "label": "ITT CORPORATION",
+        "type": "vendor",
+        "uei": "DMMUDNRTD773",
+        "stateCode": "VA",
+        "totalObligated": 705000.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541712"
+        ]
+      },
+      {
+        "id": "vendor_CHUGACH SUPPORT SERVICES, INC",
+        "label": "CHUGACH SUPPORT SERVICES, INC",
+        "type": "vendor",
+        "uei": "VEBGB7SC4JP6",
+        "stateCode": "AK",
+        "totalObligated": 195000.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 100,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_QINETIQ LTD",
+        "label": "QINETIQ LTD",
+        "type": "vendor",
+        "uei": "VF12EAN5JEY1",
+        "stateCode": "WORCS",
+        "totalObligated": 1340633.0,
+        "awardCount": 1,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_GENERAL DYNAMICS C4 SYSTEMS INCORPORATED",
+        "label": "GENERAL DYNAMICS C4 SYSTEMS INCORPORATED",
+        "type": "vendor",
+        "uei": "HTY9WJRUKPK1",
+        "stateCode": "AZ",
+        "totalObligated": 119324.0,
+        "awardCount": 5,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 100,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_ILSC HOLDINGS L.C.",
+        "label": "ILSC HOLDINGS L.C.",
+        "type": "vendor",
+        "uei": "LM8TL6VWH4C7",
+        "stateCode": "AK",
+        "totalObligated": 1419626.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_CHENEGA TECHNOLOGY SERVICES CO",
+        "label": "CHENEGA TECHNOLOGY SERVICES CO",
+        "type": "vendor",
+        "uei": "M8X2FJFF9DN8",
+        "stateCode": "VA",
+        "totalObligated": 2685553.0,
+        "awardCount": 2,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_RAYTHEON COMPANY",
+        "label": "RAYTHEON COMPANY",
+        "type": "vendor",
+        "uei": "UZLZUTCCLQE5",
+        "stateCode": "TX",
+        "totalObligated": 31342734.0,
+        "awardCount": 28,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 54,
+        "competedPct": 4,
+        "competition": "sole",
+        "naicsCodes": [
+          "336413",
+          "561210",
+          "541330",
+          "541712",
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_ALAIRE TECHNOLOGIES, INC.",
+        "label": "ALAIRE TECHNOLOGIES, INC.",
+        "type": "vendor",
+        "uei": "M9ADXKZ8AJL7",
+        "stateCode": "VA",
+        "totalObligated": 1111890.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "541712"
+        ]
+      },
+      {
+        "id": "vendor_RIG MASTERS, INC",
+        "label": "RIG MASTERS, INC",
+        "type": "vendor",
+        "uei": "CZ67ZZU238F8",
+        "stateCode": "LA",
+        "totalObligated": 462381.0,
+        "awardCount": 1,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_SCIENCE APPLICATIONS INTERNATIONAL CORPORATION",
+        "label": "SCIENCE APPLICATIONS INTERNATIONAL CORPORATION",
+        "type": "vendor",
+        "uei": "MMLKPW9JLX64",
+        "stateCode": "VA",
+        "totalObligated": 4136082.0,
+        "awardCount": 40,
+        "avgOffersReceived": 4.6,
+        "soleSourcePct": 0,
+        "competedPct": 80,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330",
+          "541712",
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_LOCKHEED MARTIN CORPORATION",
+        "label": "LOCKHEED MARTIN CORPORATION",
+        "type": "vendor",
+        "uei": "G4KDGE4JFFK7",
+        "stateCode": "TX",
+        "totalObligated": 36031838.0,
+        "awardCount": 38,
+        "avgOffersReceived": 1.9,
+        "soleSourcePct": 50,
+        "competedPct": 21,
+        "competition": "sole",
+        "naicsCodes": [
+          "541330",
+          "336413",
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_RAND & JONES ENTERPRISES COMPANY, INC.",
+        "label": "RAND & JONES ENTERPRISES COMPANY, INC.",
+        "type": "vendor",
+        "uei": "FYF1DNQHJV64",
+        "stateCode": "NY",
+        "totalObligated": 87479.0,
+        "awardCount": 2,
+        "avgOffersReceived": 5.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_AHTNA TECHNICAL SERVICES INC",
+        "label": "AHTNA TECHNICAL SERVICES INC",
+        "type": "vendor",
+        "uei": "JZUNQG1Q4ZU6",
+        "stateCode": "AK",
+        "totalObligated": 121905.0,
+        "awardCount": 2,
+        "avgOffersReceived": 6.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_RAYTHEON TECHNICAL SERVICES COMPANY LIMITED LIABILITY COMPANY (5772)",
+        "label": "RAYTHEON TECHNICAL SERVICES COMPANY LIMITED LIABILITY COMPANY (5772)",
+        "type": "vendor",
+        "uei": "F24UGAM8N397",
+        "stateCode": "FL",
+        "totalObligated": 567643.0,
+        "awardCount": 5,
+        "avgOffersReceived": 1.6,
+        "soleSourcePct": 20,
+        "competedPct": 80,
+        "competition": "competed",
+        "naicsCodes": [
+          "541330",
+          "541710"
+        ]
+      },
+      {
+        "id": "vendor_SURFACE TECHNOLOGIES CORPORATION",
+        "label": "SURFACE TECHNOLOGIES CORPORATION",
+        "type": "vendor",
+        "uei": "ZA1KMNAJMVT3",
+        "stateCode": "FL",
+        "totalObligated": 70645.0,
+        "awardCount": 3,
+        "avgOffersReceived": 4.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_GENERAL ATOMIC AERONAUTICAL SYSTEMS INCORPORATED",
+        "label": "GENERAL ATOMIC AERONAUTICAL SYSTEMS INCORPORATED",
+        "type": "vendor",
+        "uei": "ZH4NVFG3Z526",
+        "stateCode": "CA",
+        "totalObligated": 649999.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 100,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "336413"
+        ]
+      },
+      {
+        "id": "vendor_NEXONE INC.",
+        "label": "NEXONE INC.",
+        "type": "vendor",
+        "uei": "DNDGBAC5XKS4",
+        "stateCode": "UT",
+        "totalObligated": 221702.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_G2 ENGINEERING & MANAGEMENT, INC",
+        "label": "G2 ENGINEERING & MANAGEMENT, INC",
+        "type": "vendor",
+        "uei": "F9AXSNHG8GZ4",
+        "stateCode": "TN",
+        "totalObligated": 487978.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_BEACH PANEL & CONTROLS, INC",
+        "label": "BEACH PANEL & CONTROLS, INC",
+        "type": "vendor",
+        "uei": "CNSLC9GPQZZ5",
+        "stateCode": "VA",
+        "totalObligated": 65413.0,
+        "awardCount": 2,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "336611"
+        ]
+      },
+      {
+        "id": "vendor_ROCK ISLAND INTEGRATED SERVICES",
+        "label": "ROCK ISLAND INTEGRATED SERVICES",
+        "type": "vendor",
+        "uei": "JMHJV4VDT2X8",
+        "stateCode": "IL",
+        "totalObligated": 69499.0,
+        "awardCount": 1,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "561210"
+        ]
+      },
+      {
+        "id": "vendor_APPTIS TECHNOLOGY SOLUTIONS, LLC",
+        "label": "APPTIS TECHNOLOGY SOLUTIONS, LLC",
+        "type": "vendor",
+        "uei": "Q2M4FYALZJ89",
+        "stateCode": "VA",
+        "totalObligated": 58572.0,
+        "awardCount": 1,
+        "avgOffersReceived": 3.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_ACC CONSTRUCTION CO INC",
+        "label": "ACC CONSTRUCTION CO INC",
+        "type": "vendor",
+        "uei": "QXNSEJFDC1K3",
+        "stateCode": "GA",
+        "totalObligated": 62986.0,
+        "awardCount": 3,
+        "avgOffersReceived": 2.7,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_EMCO FLUID SYSTEMS INC",
+        "label": "EMCO FLUID SYSTEMS INC",
+        "type": "vendor",
+        "uei": "GGD3FZRD5Z13",
+        "stateCode": "CA",
+        "totalObligated": 2190510.0,
+        "awardCount": 1,
+        "avgOffersReceived": 2.0,
+        "soleSourcePct": 0,
+        "competedPct": 0,
+        "competition": "mixed",
+        "naicsCodes": [
+          "336413"
+        ]
+      },
+      {
+        "id": "vendor_TOMPCO- TRITON, INC",
+        "label": "TOMPCO- TRITON, INC",
+        "type": "vendor",
+        "uei": "L14GGCNXNKL5",
+        "stateCode": "WA",
+        "totalObligated": 2704000.0,
+        "awardCount": 1,
+        "avgOffersReceived": 4.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_MAVERICK SYSTEMS LLC",
+        "label": "MAVERICK SYSTEMS LLC",
+        "type": "vendor",
+        "uei": "JPYKJD2GLJ99",
+        "stateCode": "CO",
+        "totalObligated": 474000.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "541519"
+        ]
+      },
+      {
+        "id": "vendor_SIERRA NEVADA CORPORATION",
+        "label": "SIERRA NEVADA CORPORATION",
+        "type": "vendor",
+        "uei": "DD2QET4D27T3",
+        "stateCode": "NV",
+        "totalObligated": 3063856.0,
+        "awardCount": 5,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 80,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "541712",
+          "336413"
+        ]
+      },
+      {
+        "id": "vendor_JSR, INC",
+        "label": "JSR, INC",
+        "type": "vendor",
+        "uei": "LR81Y47Y83N5",
+        "stateCode": "TX",
+        "totalObligated": 50773.0,
+        "awardCount": 1,
+        "avgOffersReceived": 1.0,
+        "soleSourcePct": 100,
+        "competedPct": 0,
+        "competition": "sole",
+        "naicsCodes": [
+          "236220"
+        ]
+      },
+      {
+        "id": "vendor_VSE CORPORATION",
+        "label": "VSE CORPORATION",
+        "type": "vendor",
+        "uei": "SD7ABX8S2G79",
+        "stateCode": "VA",
+        "totalObligated": 1080374.0,
+        "awardCount": 3,
+        "avgOffersReceived": 4.0,
+        "soleSourcePct": 0,
+        "competedPct": 100,
+        "competition": "competed",
+        "naicsCodes": [
+          "336413"
+        ]
+      }
+    ],
+    "links": [
+      {
+        "source": "naics_541330",
+        "target": "vendor_THE BOEING COMPANY",
+        "value": 748940641.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_LOCKHEED MARTIN CORPORATION",
+        "value": 36031838.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_RAYTHEON COMPANY",
+        "value": 31342734.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "value": 13257258.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_L-3 COMMUNICATIONS CORPORATION",
+        "value": 11081659.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_HONEYWELL TECHNOLOGY SOLUTIONS INCORPORATED",
+        "value": 8742879.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_COMPUTER SCIENCES CORPORATION",
+        "value": 7838461.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_WYLE LABORATORIES, INC",
+        "value": 7186463.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_URSGI-BMDC, A JOINT VENTURE",
+        "value": 4493518.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_SCIENCE APPLICATIONS INTERNATIONAL CORPORATION",
+        "value": 4136082.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_AM GENERAL, LLC",
+        "value": 3577946.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_NORTHROP GRUMMAN DEFENSE MISSI",
+        "value": 3576283.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_BIOENGINEERING ARCADIS LIMITED LIABILITY COMPANY",
+        "value": 2602908.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_COMPUTER SERVANTS INCORPORATED",
+        "value": 2218181.0
+      },
+      {
+        "source": "naics_541330",
+        "target": "vendor_BAE SYSTEMS TECHNOLOGY SOLUTIONS & SERVICES INC.",
+        "value": 1750196.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_THE BOEING COMPANY",
+        "value": 748940641.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_LOCKHEED MARTIN CORPORATION",
+        "value": 36031838.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_RAYTHEON COMPANY",
+        "value": 31342734.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_BELL HELICOPTER TEXTRON INC.",
+        "value": 11111174.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_L-3 COMMUNICATIONS CORPORATION",
+        "value": 11081659.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_MOOG INC.",
+        "value": 9171750.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_LONGBOW LIMITED LIABILITY COMP",
+        "value": 9029044.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_SIERRA NEVADA CORPORATION",
+        "value": 3063856.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_MCDONNELL DOUGLAS CORPORATION",
+        "value": 2883008.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_EMCO FLUID SYSTEMS INC",
+        "value": 2190510.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_GENERAL ELECTRIC COMPANY",
+        "value": 1537422.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_LOCKHEED MARTIN CORPORATION (3632)",
+        "value": 1449336.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_VSE CORPORATION",
+        "value": 1080374.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_LB&B ASSOCIATES INC",
+        "value": 970873.0
+      },
+      {
+        "source": "naics_336413",
+        "target": "vendor_GENERAL ATOMIC AERONAUTICAL SYSTEMS INCORPORATED",
+        "value": 649999.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_RAYTHEON COMPANY",
+        "value": 31342734.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_NORTHROP GRUMMAN SYSTEMS CORPORATION",
+        "value": 13257258.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_COMPUTER SCIENCES CORPORATION",
+        "value": 7838461.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_SCIENCE APPLICATIONS INTERNATIONAL CORPORATION",
+        "value": 4136082.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_ELECTRONIC DATA SYSTEMS CORPORATION",
+        "value": 3537496.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_SIERRA NEVADA CORPORATION",
+        "value": 3063856.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_NORTHROP GRUMMAN INFORMATION TECHNOLOGY, INC.",
+        "value": 1878331.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_BAE SYSTEMS TECHNOLOGY SOLUTIONS & SERVICES INC.",
+        "value": 1750196.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_GENERAL ELECTRIC COMPANY",
+        "value": 1537422.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_ALAIRE TECHNOLOGIES, INC.",
+        "value": 1111890.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_MCDONNELL DOUGLAS CORPORATION (0674)",
+        "value": 1000000.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_AEROJET GENERAL CORPORATION",
+        "value": 785601.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_ITT CORPORATION",
+        "value": 705000.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_DMD, L.L.C.",
+        "value": 498900.0
+      },
+      {
+        "source": "naics_541712",
+        "target": "vendor_NEXTGEN AERONAUTICS, INC.",
+        "value": 494095.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_WHITING-TURNER CONTRACTING COMPANY, THE",
+        "value": 13139000.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_ARROW KINSLEY JOINT VENTURE",
+        "value": 9105787.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_MISCELLANEOUS FOREIGN CONTRACTORS",
+        "value": 6294133.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_TOMPCO- TRITON, INC",
+        "value": 2704000.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_DOMESTIC AWARDEES (UNDISCLOSED)",
+        "value": 1049734.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_G2 ENGINEERING & MANAGEMENT, INC",
+        "value": 487978.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_WEBCO",
+        "value": 287286.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_Q-MAX CONSTRUCTION COMPANY, INC.",
+        "value": 92319.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_MCTECH CORPORATION",
+        "value": 89639.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_RAND & JONES ENTERPRISES COMPANY, INC.",
+        "value": 87479.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_MR BOSNICK JOINT VENTURE INCORPORATED",
+        "value": 77700.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_JACOBS GOVERNMENT SERVICES COMPANY",
+        "value": 76731.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_A BRDC JOINT VENTURE",
+        "value": 65000.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_ACC CONSTRUCTION CO INC",
+        "value": 62986.0
+      },
+      {
+        "source": "naics_236220",
+        "target": "vendor_JSR, INC",
+        "value": 50773.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_THE BOEING COMPANY",
+        "value": 748940641.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_LOCKHEED MARTIN CORPORATION",
+        "value": 36031838.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_RAYTHEON COMPANY",
+        "value": 31342734.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_L-3 COMMUNICATIONS CORPORATION",
+        "value": 11081659.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_COMPUTER SCIENCES CORPORATION",
+        "value": 7838461.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_WYLE LABORATORIES, INC",
+        "value": 7186463.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_SCIENCE APPLICATIONS INTERNATIONAL CORPORATION",
+        "value": 4136082.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_BOOZ ALLEN  HAMILTON INC",
+        "value": 2984965.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_IIT RESEARCH INSTITUTE",
+        "value": 2296341.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_BAE SYSTEMS TECHNOLOGY SOLUTIONS & SERVICES INC.",
+        "value": 1750196.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_QINETIQ LTD",
+        "value": 1340633.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_WESTAR AEROSPACE & DEFENSE GROUP, INC.",
+        "value": 1080966.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_RAYTHEON TECHNICAL SERVICES COMPANY LIMITED LIABILITY COMPANY (5772)",
+        "value": 567643.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_HONEYWELL INTERNATIONAL INC.",
+        "value": 513743.0
+      },
+      {
+        "source": "naics_541710",
+        "target": "vendor_BATTELLE MEMORIAL INSTITUTE",
+        "value": 401961.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_MISCELLANEOUS FOREIGN CONTRACTORS",
+        "value": 6294133.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_NORTHROP GRUMMAN SHIP SYSTEMS,",
+        "value": 3677000.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_BAE SYSTEMS SAN DIEGO SHIP REPAIR INC",
+        "value": 1758685.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_BAE SYSTEMS NORFOLK SHIP REPAI",
+        "value": 678501.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_GENERAL DYNAMICS INFORMATION TECHNOLOGY, INC.",
+        "value": 492324.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_NATIONAL STEEL AND SHIPBUILDING COMPANY",
+        "value": 439858.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_NATIONAL STEEL & SHIPBUILDING",
+        "value": 357006.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_EARL INDUSTRIES, L.L.C.",
+        "value": 261237.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_ROLLS-ROYCE NAVAL MARINE INC",
+        "value": 210000.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_EPSILON SYSTEMS SOLUTIONS INCORPORATED",
+        "value": 149000.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_EPSILON SYSTEMS SOLUTION, INC.",
+        "value": 136071.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_NATIONAL STEEL & SHIPBUILDING COMPANY",
+        "value": 133398.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_SUMITOMO HEAVY INDUSTRIES, LTD.",
+        "value": 78357.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_SURFACE TECHNOLOGIES CORPORATION",
+        "value": 70645.0
+      },
+      {
+        "source": "naics_336611",
+        "target": "vendor_BEACH PANEL & CONTROLS, INC",
+        "value": 65413.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_MAVERICK SYSTEMS LLC",
+        "value": 474000.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_CNI INFORMATION TECHNOLOGY LIMITED LIABILITY COMPANY",
+        "value": 290850.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_INTERNATIONAL BUSINESS MACHINE",
+        "value": 275881.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_CELLCO PARTNERSHIP DBA VERIZON WIRELESS",
+        "value": 235802.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_NEXONE INC.",
+        "value": 221702.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_TKC INTEGRATION SERVICES LIMITED LIABILITY COMPANY",
+        "value": 177068.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_CAS SEVERN, INC.",
+        "value": 155053.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_R M VREDENBURG AND COMPANY",
+        "value": 129213.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_INTERNATIONAL BUSINESS MACHINES CORPORATION",
+        "value": 121580.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_GENERAL DYNAMICS C4 SYSTEMS INCORPORATED",
+        "value": 119324.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_FCN INCORPORATED",
+        "value": 85415.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_L 3 COMMUNICATIONS TITAN CORPORATION (8754)",
+        "value": 69038.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_APPTIS TECHNOLOGY SOLUTIONS, LLC",
+        "value": 58572.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_MICROSOFT CORPORATION SITZ IN REDMOND CORPORATION",
+        "value": 49274.0
+      },
+      {
+        "source": "naics_541519",
+        "target": "vendor_KNOWLEDGE SHARING SYSTEMS LIMITED LIABILITY COMPANY",
+        "value": 45000.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_RAYTHEON COMPANY",
+        "value": 31342734.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_STANLEY ASSOCIATES INCORPORATED",
+        "value": 7175739.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_MISCELLANEOUS FOREIGN CONTRACTORS",
+        "value": 6294133.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_READINESS MANAGEMENT SUPPORT, L.C.",
+        "value": 4124560.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_CHENEGA TECHNOLOGY SERVICES CO",
+        "value": 2685553.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_ILSC HOLDINGS L.C.",
+        "value": 1419626.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_MS TECHNOLOGY INCORPORATED (9648)",
+        "value": 1258015.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_ALEUT GLOBAL SOLUTIONS LIMITED LIABILITY COMPANY",
+        "value": 609406.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_RIG MASTERS, INC",
+        "value": 462381.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_DZSP 21 LLC",
+        "value": 252218.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_CHUGACH SUPPORT SERVICES, INC",
+        "value": 195000.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_CALL HENRY INC",
+        "value": 186701.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_CC&G COMPANY, LLC",
+        "value": 182120.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_AHTNA TECHNICAL SERVICES INC",
+        "value": 121905.0
+      },
+      {
+        "source": "naics_561210",
+        "target": "vendor_ROCK ISLAND INTEGRATED SERVICES",
+        "value": 69499.0
+      }
+    ],
+    "sectors": [
+      {
+        "code": "541330",
+        "description": "ENGINEERING SERVICES",
+        "vendorCount": 160,
+        "totalObligated": 902093576.0
+      },
+      {
+        "code": "336413",
+        "description": "OTHER AIRCRAFT PARTS AND AUXILIARY EQUIPMENT MANUFACTURING",
+        "vendorCount": 105,
+        "totalObligated": 873493196.0
+      },
+      {
+        "code": "541712",
+        "description": "RESEARCH AND DEVELOPMENT IN THE PHYSICAL, ENGINEERING, AND LIFE SCIENCES (EXCEPT BIOTECHNOLOGY)",
+        "vendorCount": 71,
+        "totalObligated": 78751687.0
+      },
+      {
+        "code": "236220",
+        "description": "COMMERCIAL AND INSTITUTIONAL BUILDING CONSTRUCTION",
+        "vendorCount": 64,
+        "totalObligated": 31659296.0
+      },
+      {
+        "code": "541710",
+        "description": "RESEARCH AND DEVELOPMENT IN THE PHYSICAL, ENGINEERING, AND LIFE SCIENCES",
+        "vendorCount": 53,
+        "totalObligated": 860692836.0
+      },
+      {
+        "code": "336611",
+        "description": "SHIP BUILDING AND REPAIRING",
+        "vendorCount": 42,
+        "totalObligated": 14218016.0
+      },
+      {
+        "code": "541519",
+        "description": "OTHER COMPUTER RELATED SERVICES",
+        "vendorCount": 40,
+        "totalObligated": 2663120.0
+      },
+      {
+        "code": "561210",
+        "description": "FACILITIES SUPPORT SERVICES",
+        "vendorCount": 39,
+        "totalObligated": 56333338.0
+      }
+    ]
   }
 }
