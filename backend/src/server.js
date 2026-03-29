@@ -12,6 +12,7 @@ const agenciesRouter  = require('./routes/agencies');
 const naicsRouter     = require('./routes/naics');
 const analyticsRouter = require('./routes/analytics');
 const dashboardRouter = require('./routes/dashboard');
+const agentRouter     = require('./routes/agent');
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
@@ -85,6 +86,7 @@ app.use('/api/analytics',  analyticsRouter);
 // Dashboard routes
 // ---------------------------------------------------------------------------
 app.use('/api/dashboard',  dashboardRouter);
+app.use('/api/agent',      agentRouter);
 
 // ---------------------------------------------------------------------------
 // 404 handler
