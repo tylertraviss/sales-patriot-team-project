@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getAwardHeaders, getAwards } from '../services/api';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
@@ -54,7 +55,7 @@ export default function AwardsTable({ cageCode = null }) {
       setRows(result.data);
       setPagination(result.pagination);
     } catch (err) {
-      setError(err.response?.data?.error || err.message);
+      setError(getApiErrorMessage(err, 'Failed to load awards.'));
     } finally {
       setLoading(false);
     }

@@ -6,12 +6,16 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "db:init": "psql $DATABASE_URL -f src/db/schema.sql"
+    "db:init": "psql $DATABASE_URL -f src/db/schema.sql",
+    "db:import": "node src/db/scripts/importAwardsCsv.js",
+    "db:studio": "drizzle-kit studio --config=drizzle.config.mjs",
+    "db:pull": "drizzle-kit pull --config=drizzle.config.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "csv-parser": "^3.0.0",
     "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.45.2",
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.12.0",
@@ -19,6 +23,7 @@
     "winston": "^3.13.0"
   },
   "devDependencies": {
+    "drizzle-kit": "^0.31.10",
     "nodemon": "^3.1.4"
   },
   "engines": {
