@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 const NaicsGraph = lazy(() => import('@/components/NaicsGraph'));
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export default function Graph() {
   // Raw full graph — fetched once, never mutated

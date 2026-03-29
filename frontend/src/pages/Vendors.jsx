@@ -21,7 +21,7 @@ const DEFAULT_FILTERS = {
 const DEFAULT_SORT = { sort: 'total_obligated', order: 'desc' };
 const DEFAULT_PAGE = { page: 1, limit: 25 };
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 
 const GLOBE_LIMIT = 500;
