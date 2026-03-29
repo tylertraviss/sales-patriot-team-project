@@ -1,6 +1,9 @@
 const crypto = require('crypto');
 const { refreshAnalyticsCaches } = require('../analyticsCache');
 
+const FORCE_ROW_BY_ROW_IMPORT = ['1', 'true', 'yes', 'on']
+  .includes(String(process.env.IMPORT_FORCE_ROW_BY_ROW || '').trim().toLowerCase());
+
 const EMPTY_STRING_VALUES = new Set(['', 'null', 'NULL', 'undefined', 'UNDEFINED']);
 
 function cleanValue(value) {
@@ -148,6 +151,19 @@ function buildAwardKey(award, vendorKey) {
   ].join(':');
 }
 
+function buildRawVendorPatch(vendor) {
+  return compactObject({
+    parent_company_name: vendor.parentCompanyName,
+    parent_uei: vendor.parentUei,
+    ultimate_uei: vendor.ultimateUei,
+    ultimate_uei_name: vendor.ultimateUeiName,
+    vendor_phone_number: vendor.vendorPhoneNumber,
+    vendor_fax_number: vendor.vendorFaxNumber,
+    source_vendor_info_id: vendor.sourceVendorInfoId,
+    source_vendor_history_id: vendor.sourceVendorHistoryId,
+  });
+}
+
 function mapUploadedRow(rawRow) {
   const vendorStateCode = normalizeBoundedCode(
     pickFirst(rawRow, ['vendorData.state_of_incorporation.code', 'stateCode'], { upper: true }),
@@ -278,6 +294,632 @@ function mapUploadedRow(rawRow) {
 
   return { vendor, award };
 }
+
+function prepareBulkRow(rawRow, sourceRowNumber) {
+  const mapped = mapUploadedRow(rawRow);
+
+  if (!mapped.vendor.vendorKey || !mapped.award.awardKey) {
+    return {
+      valid: false,
+      error: { rowNumber: sourceRowNumber, reason: 'Missing vendor or award identity' },
+    };
+  }
+
+  return {
+    valid: true,
+    row: {
+      source_row_number: sourceRowNumber,
+      source_row_hash: hashObject(rawRow),
+      payload: rawRow,
+      contract_id: mapped.award.contractId,
+      acquisition_id: mapped.award.acquisitionId,
+      vendor_uei: mapped.vendor.uei,
+      vendor_name: mapped.vendor.vendorName,
+      award_date: mapped.award.awardDate,
+      reveal_date: mapped.award.revealDate,
+      input_vendor_key: mapped.vendor.vendorKey,
+      cage_code: mapped.vendor.cageCode,
+      uei: mapped.vendor.uei,
+      business_type_description: mapped.vendor.businessTypeDescription,
+      socio_economic_indicator: mapped.vendor.socioEconomicIndicator,
+      parent_company_name: mapped.vendor.parentCompanyName,
+      parent_uei: mapped.vendor.parentUei,
+      ultimate_uei: mapped.vendor.ultimateUei,
+      ultimate_uei_name: mapped.vendor.ultimateUeiName,
+      vendor_phone_number: mapped.vendor.vendorPhoneNumber,
+      vendor_fax_number: mapped.vendor.vendorFaxNumber,
+      annual_revenue: mapped.vendor.annualRevenue,
+      number_of_employees: mapped.vendor.numberOfEmployees,
+      vendor_registration_date: mapped.vendor.vendorRegistrationDate,
+      vendor_renewal_date: mapped.vendor.vendorRenewalDate,
+      city: mapped.vendor.city,
+      state_code: mapped.vendor.stateCode,
+      state_name: mapped.vendor.stateName,
+      zip_code: mapped.vendor.zipCode,
+      country_code: mapped.vendor.countryCode,
+      country_name: mapped.vendor.countryName,
+      source_vendor_info_id: mapped.vendor.sourceVendorInfoId,
+      source_vendor_history_id: mapped.vendor.sourceVendorHistoryId,
+      raw_vendor: buildRawVendorPatch(mapped.vendor),
+      award_key: mapped.award.awardKey,
+      piid: mapped.award.piid,
+      reference_piid: mapped.award.referencePiid,
+      contract_number: mapped.award.contractNumber,
+      modification_number: mapped.award.modificationNumber,
+      reference_modification_number: mapped.award.referenceModificationNumber,
+      transaction_number: mapped.award.transactionNumber,
+      award_or_idv: mapped.award.awardOrIdv,
+      award_type: mapped.award.awardType,
+      award_type_description: mapped.award.awardTypeDescription,
+      award_status: mapped.award.awardStatus,
+      total_actions: mapped.award.totalActions,
+      number_of_actions: mapped.award.numberOfActions,
+      award_amount: mapped.award.awardAmount,
+      total_contract_value: mapped.award.totalContractValue,
+      base_and_exercised_options_value: mapped.award.baseAndExercisedOptionsValue,
+      date_signed: mapped.award.dateSigned,
+      solicitation_date: mapped.award.solicitationDate,
+      period_of_performance_start_date: mapped.award.periodOfPerformanceStartDate,
+      current_completion_date: mapped.award.currentCompletionDate,
+      award_ultimate_completion_date: mapped.award.awardUltimateCompletionDate,
+      award_fiscal_year: mapped.award.awardFiscalYear,
+      contract_fiscal_year: mapped.award.contractFiscalYear,
+      naics_code: mapped.award.naicsCode,
+      naics_description: mapped.award.naicsDescription,
+      product_service_code: mapped.award.productServiceCode,
+      product_service_description: mapped.award.productServiceDescription,
+      product_or_service_type: mapped.award.productOrServiceType,
+      description_of_requirement: mapped.award.descriptionOfRequirement,
+      extent_competed_code: mapped.award.extentCompetedCode,
+      extent_competed_name: mapped.award.extentCompetedName,
+      set_aside_code: mapped.award.setAsideCode,
+      set_aside_name: mapped.award.setAsideName,
+      contracting_department_code: mapped.award.contractingDepartmentCode,
+      contracting_department_name: mapped.award.contractingDepartmentName,
+      contracting_agency_code: mapped.award.contractingAgencyCode,
+      contracting_agency_name: mapped.award.contractingAgencyName,
+      contracting_office_code: mapped.award.contractingOfficeCode,
+      contracting_office_name: mapped.award.contractingOfficeName,
+      funding_department_code: mapped.award.fundingDepartmentCode,
+      funding_department_name: mapped.award.fundingDepartmentName,
+      funding_agency_code: mapped.award.fundingAgencyCode,
+      funding_agency_name: mapped.award.fundingAgencyName,
+      funding_office_code: mapped.award.fundingOfficeCode,
+      funding_office_name: mapped.award.fundingOfficeName,
+      place_of_performance_city: mapped.award.placeOfPerformanceCity,
+      place_of_performance_state_code: mapped.award.placeOfPerformanceStateCode,
+      place_of_performance_state_name: mapped.award.placeOfPerformanceStateName,
+      place_of_performance_country_code: mapped.award.placeOfPerformanceCountryCode,
+      place_of_performance_country_name: mapped.award.placeOfPerformanceCountryName,
+      place_of_performance_zip: mapped.award.placeOfPerformanceZip,
+      extra_attributes: mapped.award.extraAttributes,
+    },
+  };
+}
+
+const BULK_INGEST_SQL = `
+WITH input_rows AS (
+  SELECT *
+    FROM jsonb_to_recordset($1::jsonb) AS rows(
+      source_row_number BIGINT,
+      source_row_hash TEXT,
+      payload JSONB,
+      contract_id TEXT,
+      acquisition_id TEXT,
+      vendor_uei TEXT,
+      vendor_name TEXT,
+      award_date DATE,
+      reveal_date DATE,
+      input_vendor_key TEXT,
+      cage_code VARCHAR(10),
+      uei VARCHAR(20),
+      business_type_description TEXT,
+      socio_economic_indicator TEXT,
+      parent_company_name TEXT,
+      parent_uei TEXT,
+      ultimate_uei TEXT,
+      ultimate_uei_name TEXT,
+      vendor_phone_number TEXT,
+      vendor_fax_number TEXT,
+      annual_revenue NUMERIC(18, 2),
+      number_of_employees INTEGER,
+      vendor_registration_date DATE,
+      vendor_renewal_date DATE,
+      city TEXT,
+      state_code TEXT,
+      state_name TEXT,
+      zip_code TEXT,
+      country_code TEXT,
+      country_name TEXT,
+      source_vendor_info_id TEXT,
+      source_vendor_history_id TEXT,
+      raw_vendor JSONB,
+      award_key TEXT,
+      piid TEXT,
+      reference_piid TEXT,
+      contract_number TEXT,
+      modification_number TEXT,
+      reference_modification_number TEXT,
+      transaction_number TEXT,
+      award_or_idv TEXT,
+      award_type TEXT,
+      award_type_description TEXT,
+      award_status TEXT,
+      total_actions INTEGER,
+      number_of_actions INTEGER,
+      award_amount NUMERIC(18, 2),
+      total_contract_value NUMERIC(18, 2),
+      base_and_exercised_options_value NUMERIC(18, 2),
+      date_signed DATE,
+      solicitation_date DATE,
+      period_of_performance_start_date DATE,
+      current_completion_date DATE,
+      award_ultimate_completion_date DATE,
+      award_fiscal_year INTEGER,
+      contract_fiscal_year INTEGER,
+      naics_code VARCHAR(10),
+      naics_description TEXT,
+      product_service_code VARCHAR(10),
+      product_service_description TEXT,
+      product_or_service_type TEXT,
+      description_of_requirement TEXT,
+      extent_competed_code TEXT,
+      extent_competed_name TEXT,
+      set_aside_code TEXT,
+      set_aside_name TEXT,
+      contracting_department_code TEXT,
+      contracting_department_name TEXT,
+      contracting_agency_code TEXT,
+      contracting_agency_name TEXT,
+      contracting_office_code TEXT,
+      contracting_office_name TEXT,
+      funding_department_code TEXT,
+      funding_department_name TEXT,
+      funding_agency_code TEXT,
+      funding_agency_name TEXT,
+      funding_office_code TEXT,
+      funding_office_name TEXT,
+      place_of_performance_city TEXT,
+      place_of_performance_state_code TEXT,
+      place_of_performance_state_name TEXT,
+      place_of_performance_country_code TEXT,
+      place_of_performance_country_name TEXT,
+      place_of_performance_zip TEXT,
+      extra_attributes JSONB
+    )
+),
+valid_rows AS (
+  SELECT *
+    FROM input_rows
+   WHERE input_vendor_key IS NOT NULL
+     AND award_key IS NOT NULL
+),
+distinct_vendors AS (
+  SELECT DISTINCT ON (input_vendor_key) *
+    FROM valid_rows
+   ORDER BY input_vendor_key, source_row_number DESC
+),
+insert_naics AS (
+  INSERT INTO naics_codes (code, description)
+  SELECT DISTINCT naics_code, COALESCE(naics_description, 'Unknown')
+    FROM valid_rows
+   WHERE naics_code IS NOT NULL
+     AND BTRIM(naics_code) <> ''
+  ON CONFLICT (code) DO NOTHING
+),
+insert_product_service_codes AS (
+  INSERT INTO product_service_codes (code, description)
+  SELECT DISTINCT product_service_code, COALESCE(product_service_description, product_or_service_type, 'Unknown')
+    FROM valid_rows
+   WHERE product_service_code IS NOT NULL
+     AND BTRIM(product_service_code) <> ''
+  ON CONFLICT (code) DO NOTHING
+),
+matched_vendors AS (
+  SELECT dv.input_vendor_key, matched.vendor_id
+    FROM distinct_vendors dv
+    LEFT JOIN LATERAL (
+      SELECT ve.vendor_id
+        FROM vendor_entities ve
+       WHERE (dv.cage_code IS NOT NULL AND ve.cage_code = dv.cage_code)
+          OR (dv.uei IS NOT NULL AND ve.uei = dv.uei)
+          OR ve.vendor_key = dv.input_vendor_key
+       ORDER BY CASE
+         WHEN dv.cage_code IS NOT NULL AND ve.cage_code = dv.cage_code THEN 0
+         WHEN dv.uei IS NOT NULL AND ve.uei = dv.uei THEN 1
+         ELSE 2
+       END
+       LIMIT 1
+    ) matched ON TRUE
+),
+matched_vendor_rows AS (
+  SELECT DISTINCT ON (mv.vendor_id)
+         mv.vendor_id,
+         dv.*
+    FROM matched_vendors mv
+    JOIN distinct_vendors dv ON dv.input_vendor_key = mv.input_vendor_key
+   WHERE mv.vendor_id IS NOT NULL
+   ORDER BY mv.vendor_id, dv.source_row_number DESC
+),
+updated_vendors AS (
+  UPDATE vendor_entities ve
+     SET vendor_key = CASE
+           WHEN ve.cage_code IS NULL AND mvr.cage_code IS NOT NULL THEN mvr.input_vendor_key
+           ELSE ve.vendor_key
+         END,
+         cage_code = COALESCE(mvr.cage_code, ve.cage_code),
+         uei = COALESCE(mvr.uei, ve.uei),
+         vendor_name = COALESCE(NULLIF(mvr.vendor_name, ''), ve.vendor_name),
+         business_type_description = COALESCE(NULLIF(mvr.business_type_description, ''), ve.business_type_description),
+         socio_economic_indicator = COALESCE(NULLIF(mvr.socio_economic_indicator, ''), ve.socio_economic_indicator),
+         parent_company_name = COALESCE(NULLIF(mvr.parent_company_name, ''), ve.parent_company_name),
+         parent_uei = COALESCE(NULLIF(mvr.parent_uei, ''), ve.parent_uei),
+         ultimate_uei = COALESCE(NULLIF(mvr.ultimate_uei, ''), ve.ultimate_uei),
+         ultimate_uei_name = COALESCE(NULLIF(mvr.ultimate_uei_name, ''), ve.ultimate_uei_name),
+         vendor_phone_number = COALESCE(NULLIF(mvr.vendor_phone_number, ''), ve.vendor_phone_number),
+         vendor_fax_number = COALESCE(NULLIF(mvr.vendor_fax_number, ''), ve.vendor_fax_number),
+         annual_revenue = COALESCE(mvr.annual_revenue, ve.annual_revenue),
+         number_of_employees = COALESCE(mvr.number_of_employees, ve.number_of_employees),
+         vendor_registration_date = COALESCE(mvr.vendor_registration_date, ve.vendor_registration_date),
+         vendor_renewal_date = COALESCE(mvr.vendor_renewal_date, ve.vendor_renewal_date),
+         city = COALESCE(NULLIF(mvr.city, ''), ve.city),
+         state_code = COALESCE(NULLIF(mvr.state_code, ''), ve.state_code),
+         state_name = COALESCE(NULLIF(mvr.state_name, ''), ve.state_name),
+         zip_code = COALESCE(NULLIF(mvr.zip_code, ''), ve.zip_code),
+         country_code = COALESCE(NULLIF(mvr.country_code, ''), ve.country_code),
+         country_name = COALESCE(NULLIF(mvr.country_name, ''), ve.country_name),
+         source_vendor_info_id = COALESCE(NULLIF(mvr.source_vendor_info_id, ''), ve.source_vendor_info_id),
+         source_vendor_history_id = COALESCE(NULLIF(mvr.source_vendor_history_id, ''), ve.source_vendor_history_id),
+         raw_vendor = COALESCE(ve.raw_vendor, '{}'::jsonb) || COALESCE(mvr.raw_vendor, '{}'::jsonb)
+    FROM matched_vendor_rows mvr
+   WHERE ve.vendor_id = mvr.vendor_id
+  RETURNING ve.vendor_id
+),
+inserted_vendors AS (
+  INSERT INTO vendor_entities (
+    vendor_key,
+    cage_code,
+    uei,
+    vendor_name,
+    business_type_description,
+    socio_economic_indicator,
+    parent_company_name,
+    parent_uei,
+    ultimate_uei,
+    ultimate_uei_name,
+    vendor_phone_number,
+    vendor_fax_number,
+    annual_revenue,
+    number_of_employees,
+    vendor_registration_date,
+    vendor_renewal_date,
+    city,
+    state_code,
+    state_name,
+    zip_code,
+    country_code,
+    country_name,
+    source_vendor_info_id,
+    source_vendor_history_id,
+    raw_vendor
+  )
+  SELECT
+    dv.input_vendor_key,
+    dv.cage_code,
+    dv.uei,
+    dv.vendor_name,
+    dv.business_type_description,
+    dv.socio_economic_indicator,
+    dv.parent_company_name,
+    dv.parent_uei,
+    dv.ultimate_uei,
+    dv.ultimate_uei_name,
+    dv.vendor_phone_number,
+    dv.vendor_fax_number,
+    dv.annual_revenue,
+    dv.number_of_employees,
+    dv.vendor_registration_date,
+    dv.vendor_renewal_date,
+    dv.city,
+    dv.state_code,
+    dv.state_name,
+    dv.zip_code,
+    dv.country_code,
+    dv.country_name,
+    dv.source_vendor_info_id,
+    dv.source_vendor_history_id,
+    COALESCE(dv.raw_vendor, '{}'::jsonb)
+  FROM distinct_vendors dv
+  LEFT JOIN matched_vendors mv ON mv.input_vendor_key = dv.input_vendor_key
+  WHERE mv.vendor_id IS NULL
+  ON CONFLICT DO NOTHING
+  RETURNING vendor_key, vendor_id, cage_code, uei
+),
+resolved_vendors AS (
+  SELECT
+    dv.input_vendor_key,
+    COALESCE(mv.vendor_id, iv.vendor_id, inserted_match.vendor_id, resolved.vendor_id) AS vendor_id
+  FROM distinct_vendors dv
+  LEFT JOIN matched_vendors mv ON mv.input_vendor_key = dv.input_vendor_key
+  LEFT JOIN inserted_vendors iv ON iv.vendor_key = dv.input_vendor_key
+  LEFT JOIN LATERAL (
+    SELECT ins.vendor_id
+      FROM inserted_vendors ins
+     WHERE (dv.cage_code IS NOT NULL AND ins.cage_code = dv.cage_code)
+        OR (dv.uei IS NOT NULL AND ins.uei = dv.uei)
+        OR ins.vendor_key = dv.input_vendor_key
+     ORDER BY CASE
+       WHEN dv.cage_code IS NOT NULL AND ins.cage_code = dv.cage_code THEN 0
+       WHEN dv.uei IS NOT NULL AND ins.uei = dv.uei THEN 1
+       ELSE 2
+     END
+     LIMIT 1
+  ) inserted_match ON TRUE
+  LEFT JOIN LATERAL (
+    SELECT ve.vendor_id
+      FROM vendor_entities ve
+     WHERE (dv.cage_code IS NOT NULL AND ve.cage_code = dv.cage_code)
+        OR (dv.uei IS NOT NULL AND ve.uei = dv.uei)
+        OR ve.vendor_key = dv.input_vendor_key
+     ORDER BY CASE
+       WHEN dv.cage_code IS NOT NULL AND ve.cage_code = dv.cage_code THEN 0
+       WHEN dv.uei IS NOT NULL AND ve.uei = dv.uei THEN 1
+       ELSE 2
+     END
+     LIMIT 1
+  ) resolved ON TRUE
+),
+inserted_raw_rows AS (
+  INSERT INTO raw_award_rows (
+    ingest_file_id,
+    source_row_number,
+    source_row_hash,
+    contract_id,
+    acquisition_id,
+    vendor_uei,
+    vendor_name,
+    award_date,
+    reveal_date,
+    payload
+  )
+  SELECT
+    $2::uuid,
+    source_row_number,
+    source_row_hash,
+    contract_id,
+    acquisition_id,
+    vendor_uei,
+    vendor_name,
+    award_date,
+    reveal_date,
+    payload
+  FROM valid_rows
+  ON CONFLICT DO NOTHING
+  RETURNING source_row_hash, raw_award_row_id
+),
+resolved_raw_rows AS (
+  SELECT
+    vr.source_row_number,
+    vr.award_key,
+    COALESCE(irr.raw_award_row_id, rar.raw_award_row_id) AS raw_award_row_id
+  FROM valid_rows vr
+  LEFT JOIN inserted_raw_rows irr ON irr.source_row_hash = vr.source_row_hash
+  LEFT JOIN raw_award_rows rar ON rar.source_row_hash = vr.source_row_hash
+),
+distinct_awards AS (
+  SELECT DISTINCT ON (vr.award_key)
+         vr.*,
+         rv.vendor_id,
+         rrr.raw_award_row_id
+    FROM valid_rows vr
+    JOIN resolved_vendors rv ON rv.input_vendor_key = vr.input_vendor_key
+    LEFT JOIN resolved_raw_rows rrr
+      ON rrr.source_row_number = vr.source_row_number
+     AND rrr.award_key = vr.award_key
+   WHERE rv.vendor_id IS NOT NULL
+   ORDER BY vr.award_key, vr.source_row_number DESC
+),
+upsert_awards AS (
+  INSERT INTO award_transactions (
+    award_key,
+    ingest_file_id,
+    raw_award_row_id,
+    vendor_id,
+    contract_id,
+    acquisition_id,
+    source_vendor_info_id,
+    source_vendor_history_id,
+    piid,
+    reference_piid,
+    contract_number,
+    modification_number,
+    reference_modification_number,
+    transaction_number,
+    award_or_idv,
+    award_type,
+    award_type_description,
+    award_status,
+    total_actions,
+    number_of_actions,
+    award_amount,
+    total_contract_value,
+    base_and_exercised_options_value,
+    award_date,
+    date_signed,
+    reveal_date,
+    solicitation_date,
+    period_of_performance_start_date,
+    current_completion_date,
+    award_ultimate_completion_date,
+    award_fiscal_year,
+    contract_fiscal_year,
+    naics_code,
+    naics_description,
+    product_service_code,
+    product_service_description,
+    product_or_service_type,
+    description_of_requirement,
+    business_type_description,
+    socio_economic_indicator,
+    extent_competed_code,
+    extent_competed_name,
+    set_aside_code,
+    set_aside_name,
+    contracting_department_code,
+    contracting_department_name,
+    contracting_agency_code,
+    contracting_agency_name,
+    contracting_office_code,
+    contracting_office_name,
+    funding_department_code,
+    funding_department_name,
+    funding_agency_code,
+    funding_agency_name,
+    funding_office_code,
+    funding_office_name,
+    place_of_performance_city,
+    place_of_performance_state_code,
+    place_of_performance_state_name,
+    place_of_performance_country_code,
+    place_of_performance_country_name,
+    place_of_performance_zip,
+    extra_attributes
+  )
+  SELECT
+    award_key,
+    $2::uuid,
+    raw_award_row_id,
+    vendor_id,
+    contract_id,
+    acquisition_id,
+    source_vendor_info_id,
+    source_vendor_history_id,
+    piid,
+    reference_piid,
+    contract_number,
+    modification_number,
+    reference_modification_number,
+    transaction_number,
+    award_or_idv,
+    award_type,
+    award_type_description,
+    award_status,
+    total_actions,
+    number_of_actions,
+    award_amount,
+    total_contract_value,
+    base_and_exercised_options_value,
+    award_date,
+    date_signed,
+    reveal_date,
+    solicitation_date,
+    period_of_performance_start_date,
+    current_completion_date,
+    award_ultimate_completion_date,
+    award_fiscal_year,
+    contract_fiscal_year,
+    naics_code,
+    naics_description,
+    product_service_code,
+    product_service_description,
+    product_or_service_type,
+    description_of_requirement,
+    business_type_description,
+    socio_economic_indicator,
+    extent_competed_code,
+    extent_competed_name,
+    set_aside_code,
+    set_aside_name,
+    contracting_department_code,
+    contracting_department_name,
+    contracting_agency_code,
+    contracting_agency_name,
+    contracting_office_code,
+    contracting_office_name,
+    funding_department_code,
+    funding_department_name,
+    funding_agency_code,
+    funding_agency_name,
+    funding_office_code,
+    funding_office_name,
+    place_of_performance_city,
+    place_of_performance_state_code,
+    place_of_performance_state_name,
+    place_of_performance_country_code,
+    place_of_performance_country_name,
+    place_of_performance_zip,
+    COALESCE(extra_attributes, '{}'::jsonb)
+  FROM distinct_awards
+  ON CONFLICT (award_key) DO UPDATE
+    SET ingest_file_id = COALESCE(EXCLUDED.ingest_file_id, award_transactions.ingest_file_id),
+        raw_award_row_id = COALESCE(EXCLUDED.raw_award_row_id, award_transactions.raw_award_row_id),
+        vendor_id = EXCLUDED.vendor_id,
+        contract_id = COALESCE(NULLIF(EXCLUDED.contract_id, ''), award_transactions.contract_id),
+        acquisition_id = COALESCE(NULLIF(EXCLUDED.acquisition_id, ''), award_transactions.acquisition_id),
+        source_vendor_info_id = COALESCE(NULLIF(EXCLUDED.source_vendor_info_id, ''), award_transactions.source_vendor_info_id),
+        source_vendor_history_id = COALESCE(NULLIF(EXCLUDED.source_vendor_history_id, ''), award_transactions.source_vendor_history_id),
+        piid = COALESCE(NULLIF(EXCLUDED.piid, ''), award_transactions.piid),
+        reference_piid = COALESCE(NULLIF(EXCLUDED.reference_piid, ''), award_transactions.reference_piid),
+        contract_number = COALESCE(NULLIF(EXCLUDED.contract_number, ''), award_transactions.contract_number),
+        modification_number = COALESCE(NULLIF(EXCLUDED.modification_number, ''), award_transactions.modification_number),
+        reference_modification_number = COALESCE(NULLIF(EXCLUDED.reference_modification_number, ''), award_transactions.reference_modification_number),
+        transaction_number = COALESCE(NULLIF(EXCLUDED.transaction_number, ''), award_transactions.transaction_number),
+        award_or_idv = COALESCE(NULLIF(EXCLUDED.award_or_idv, ''), award_transactions.award_or_idv),
+        award_type = COALESCE(NULLIF(EXCLUDED.award_type, ''), award_transactions.award_type),
+        award_type_description = COALESCE(NULLIF(EXCLUDED.award_type_description, ''), award_transactions.award_type_description),
+        award_status = COALESCE(NULLIF(EXCLUDED.award_status, ''), award_transactions.award_status),
+        total_actions = COALESCE(EXCLUDED.total_actions, award_transactions.total_actions),
+        number_of_actions = COALESCE(EXCLUDED.number_of_actions, award_transactions.number_of_actions),
+        award_amount = COALESCE(EXCLUDED.award_amount, award_transactions.award_amount),
+        total_contract_value = COALESCE(EXCLUDED.total_contract_value, award_transactions.total_contract_value),
+        base_and_exercised_options_value = COALESCE(EXCLUDED.base_and_exercised_options_value, award_transactions.base_and_exercised_options_value),
+        award_date = COALESCE(EXCLUDED.award_date, award_transactions.award_date),
+        date_signed = COALESCE(EXCLUDED.date_signed, award_transactions.date_signed),
+        reveal_date = COALESCE(EXCLUDED.reveal_date, award_transactions.reveal_date),
+        solicitation_date = COALESCE(EXCLUDED.solicitation_date, award_transactions.solicitation_date),
+        period_of_performance_start_date = COALESCE(EXCLUDED.period_of_performance_start_date, award_transactions.period_of_performance_start_date),
+        current_completion_date = COALESCE(EXCLUDED.current_completion_date, award_transactions.current_completion_date),
+        award_ultimate_completion_date = COALESCE(EXCLUDED.award_ultimate_completion_date, award_transactions.award_ultimate_completion_date),
+        award_fiscal_year = COALESCE(EXCLUDED.award_fiscal_year, award_transactions.award_fiscal_year),
+        contract_fiscal_year = COALESCE(EXCLUDED.contract_fiscal_year, award_transactions.contract_fiscal_year),
+        naics_code = COALESCE(NULLIF(EXCLUDED.naics_code, ''), award_transactions.naics_code),
+        naics_description = COALESCE(NULLIF(EXCLUDED.naics_description, ''), award_transactions.naics_description),
+        product_service_code = COALESCE(NULLIF(EXCLUDED.product_service_code, ''), award_transactions.product_service_code),
+        product_service_description = COALESCE(NULLIF(EXCLUDED.product_service_description, ''), award_transactions.product_service_description),
+        product_or_service_type = COALESCE(NULLIF(EXCLUDED.product_or_service_type, ''), award_transactions.product_or_service_type),
+        description_of_requirement = COALESCE(NULLIF(EXCLUDED.description_of_requirement, ''), award_transactions.description_of_requirement),
+        business_type_description = COALESCE(NULLIF(EXCLUDED.business_type_description, ''), award_transactions.business_type_description),
+        socio_economic_indicator = COALESCE(NULLIF(EXCLUDED.socio_economic_indicator, ''), award_transactions.socio_economic_indicator),
+        extent_competed_code = COALESCE(NULLIF(EXCLUDED.extent_competed_code, ''), award_transactions.extent_competed_code),
+        extent_competed_name = COALESCE(NULLIF(EXCLUDED.extent_competed_name, ''), award_transactions.extent_competed_name),
+        set_aside_code = COALESCE(NULLIF(EXCLUDED.set_aside_code, ''), award_transactions.set_aside_code),
+        set_aside_name = COALESCE(NULLIF(EXCLUDED.set_aside_name, ''), award_transactions.set_aside_name),
+        contracting_department_code = COALESCE(NULLIF(EXCLUDED.contracting_department_code, ''), award_transactions.contracting_department_code),
+        contracting_department_name = COALESCE(NULLIF(EXCLUDED.contracting_department_name, ''), award_transactions.contracting_department_name),
+        contracting_agency_code = COALESCE(NULLIF(EXCLUDED.contracting_agency_code, ''), award_transactions.contracting_agency_code),
+        contracting_agency_name = COALESCE(NULLIF(EXCLUDED.contracting_agency_name, ''), award_transactions.contracting_agency_name),
+        contracting_office_code = COALESCE(NULLIF(EXCLUDED.contracting_office_code, ''), award_transactions.contracting_office_code),
+        contracting_office_name = COALESCE(NULLIF(EXCLUDED.contracting_office_name, ''), award_transactions.contracting_office_name),
+        funding_department_code = COALESCE(NULLIF(EXCLUDED.funding_department_code, ''), award_transactions.funding_department_code),
+        funding_department_name = COALESCE(NULLIF(EXCLUDED.funding_department_name, ''), award_transactions.funding_department_name),
+        funding_agency_code = COALESCE(NULLIF(EXCLUDED.funding_agency_code, ''), award_transactions.funding_agency_code),
+        funding_agency_name = COALESCE(NULLIF(EXCLUDED.funding_agency_name, ''), award_transactions.funding_agency_name),
+        funding_office_code = COALESCE(NULLIF(EXCLUDED.funding_office_code, ''), award_transactions.funding_office_code),
+        funding_office_name = COALESCE(NULLIF(EXCLUDED.funding_office_name, ''), award_transactions.funding_office_name),
+        place_of_performance_city = COALESCE(NULLIF(EXCLUDED.place_of_performance_city, ''), award_transactions.place_of_performance_city),
+        place_of_performance_state_code = COALESCE(NULLIF(EXCLUDED.place_of_performance_state_code, ''), award_transactions.place_of_performance_state_code),
+        place_of_performance_state_name = COALESCE(NULLIF(EXCLUDED.place_of_performance_state_name, ''), award_transactions.place_of_performance_state_name),
+        place_of_performance_country_code = COALESCE(NULLIF(EXCLUDED.place_of_performance_country_code, ''), award_transactions.place_of_performance_country_code),
+        place_of_performance_country_name = COALESCE(NULLIF(EXCLUDED.place_of_performance_country_name, ''), award_transactions.place_of_performance_country_name),
+        place_of_performance_zip = COALESCE(NULLIF(EXCLUDED.place_of_performance_zip, ''), award_transactions.place_of_performance_zip),
+        extra_attributes = award_transactions.extra_attributes || EXCLUDED.extra_attributes
+  RETURNING award_key
+)
+SELECT
+  (SELECT COUNT(*) FROM valid_rows) AS processed_count,
+  (SELECT COUNT(*) FROM resolved_raw_rows WHERE raw_award_row_id IS NOT NULL) AS raw_rows_linked,
+  (SELECT COUNT(*) FROM upsert_awards) AS awards_upserted;
+`;
 
 async function createOrReuseIngestFile(client, {
   fileName,
@@ -413,16 +1055,7 @@ async function upsertVendor(client, vendor, vendorCache) {
     [vendor.cageCode, vendor.uei, vendor.vendorKey],
   );
 
-  const rawVendorPatch = compactObject({
-    parent_company_name: vendor.parentCompanyName,
-    parent_uei: vendor.parentUei,
-    ultimate_uei: vendor.ultimateUei,
-    ultimate_uei_name: vendor.ultimateUeiName,
-    vendor_phone_number: vendor.vendorPhoneNumber,
-    vendor_fax_number: vendor.vendorFaxNumber,
-    source_vendor_info_id: vendor.sourceVendorInfoId,
-    source_vendor_history_id: vendor.sourceVendorHistoryId,
-  });
+  const rawVendorPatch = buildRawVendorPatch(vendor);
 
   if (existingResult.rows[0]) {
     const existing = existingResult.rows[0];
@@ -567,9 +1200,7 @@ async function upsertCodeTable(client, tableName, code, description) {
   await client.query(
     `INSERT INTO ${tableName} (code, description)
      VALUES ($1, COALESCE($2, 'Unknown'))
-     ON CONFLICT (code) DO UPDATE
-       SET description = COALESCE(NULLIF(EXCLUDED.description, ''), ${tableName}.description),
-           updated_at = NOW()`,
+     ON CONFLICT (code) DO NOTHING`,
     [code, description],
   );
 }
@@ -818,7 +1449,32 @@ async function beginIngestFile(client, {
   });
 }
 
-async function ingestAwardRows(client, state, { ingestFileId, rows, startRowNumber = 1 }) {
+async function ingestAwardRowsBulk(client, state, { ingestFileId, rows, startRowNumber = 1 }) {
+  const preparedRows = [];
+
+  rows.forEach((rawRow, index) => {
+    const prepared = prepareBulkRow(rawRow, startRowNumber + index);
+    if (!prepared.valid) {
+      state.skipped++;
+      state.errors.push(prepared.error);
+      return;
+    }
+
+    preparedRows.push(prepared.row);
+  });
+
+  if (preparedRows.length === 0) {
+    return;
+  }
+
+  const result = await client.query(BULK_INGEST_SQL, [JSON.stringify(preparedRows), ingestFileId]);
+  const summary = result.rows[0] || {};
+
+  state.inserted += Number(summary.processed_count || 0);
+  state.rawRowsLinked += Number(summary.raw_rows_linked || 0);
+}
+
+async function ingestAwardRowsRowByRow(client, state, { ingestFileId, rows, startRowNumber = 1 }) {
   for (const [index, rawRow] of rows.entries()) {
     const mapped = mapUploadedRow(rawRow);
 
@@ -863,6 +1519,37 @@ async function ingestAwardRows(client, state, { ingestFileId, rows, startRowNumb
       state.skipped++;
       state.errors.push({ rowNumber: startRowNumber + index, reason: rowError.message });
     }
+  }
+}
+
+async function ingestAwardRows(client, state, { ingestFileId, rows, startRowNumber = 1 }) {
+  if (FORCE_ROW_BY_ROW_IMPORT) {
+    await ingestAwardRowsRowByRow(client, state, {
+      ingestFileId,
+      rows,
+      startRowNumber,
+    });
+    return;
+  }
+
+  await client.query('SAVEPOINT ingest_batch_fast_path');
+
+  try {
+    await ingestAwardRowsBulk(client, state, {
+      ingestFileId,
+      rows,
+      startRowNumber,
+    });
+    await client.query('RELEASE SAVEPOINT ingest_batch_fast_path');
+  } catch (error) {
+    await client.query('ROLLBACK TO SAVEPOINT ingest_batch_fast_path');
+    await client.query('RELEASE SAVEPOINT ingest_batch_fast_path');
+
+    await ingestAwardRowsRowByRow(client, state, {
+      ingestFileId,
+      rows,
+      startRowNumber,
+    });
   }
 }
 

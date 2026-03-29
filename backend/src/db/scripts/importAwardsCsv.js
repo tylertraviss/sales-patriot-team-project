@@ -12,7 +12,7 @@ const {
   markIngestFile,
 } = require('../importers/awardsIngest');
 
-const DEFAULT_BATCH_SIZE = Number.parseInt(process.env.IMPORT_BATCH_SIZE || '1000', 10);
+const DEFAULT_BATCH_SIZE = Number.parseInt(process.env.IMPORT_BATCH_SIZE || '2000', 10);
 
 function usage() {
   console.error('Usage: node src/db/scripts/importAwardsCsv.js <csv-file-or-directory>');
