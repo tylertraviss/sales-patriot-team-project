@@ -1,5 +1,7 @@
 # API Design
 
+This file is the source of truth for API route structure and response shapes.
+
 ## Overview
 
 Two layers:

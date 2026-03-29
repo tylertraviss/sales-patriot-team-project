@@ -61,34 +61,13 @@ cd ../frontend && npm run dev
 
 ## API
 
-Full API design is documented in [API.md](./API.md).
+API route structure, payloads, and endpoint families are documented in [API.md](./API.md).
 
-Current implemented backend routes:
+Use `API.md` as the canonical contract for:
 
-```text
-GET /health
-
-GET /api/companies
-  ?page=1&limit=25
-  ?search=indyne
-
-GET /api/companies/:cageCode
-
-GET /api/awards/headers
-
-GET /api/awards
-  ?page=1&limit=25
-  ?sortBy=award_amount
-  ?sortDir=desc
-  ?cageCode=07MU1
-
-GET /api/awards/:cageCode
-  ?page=1&limit=25
-  ?sortBy=award_date
-  ?sortDir=desc
-
-POST /api/upload
-```
+- standard endpoints such as `GET /health`, `GET /health/db`, and `GET /api`
+- REST resources such as vendors, awards, agencies, and NAICS
+- analytics endpoints under `/api/analytics/*`
 
 ---
 
@@ -98,11 +77,11 @@ Database design notes for the real CSV exports are in [docs/database-schema.md](
 
 Backend Drizzle setup lives in `backend/drizzle.config.mjs` with runtime schema/client files under `backend/src/db/drizzle/`.
 
-The database source of truth is `backend/src/db/schema.sql`. The current read routes query `award_transactions`, `vendor_entities`, and the investment summary views directly.
+The database source of truth is `backend/src/db/schema.sql`. The schema and ingest pipeline are intended to support the API contract described in [API.md](./API.md).
 
 ---
 
 ## Team
 
 - **Backend team** — server, API routes, data ingestion, DB schema
-- **Frontend team** — display, upload UI, consumes headers from `/api/awards/headers`
+- **Frontend team** — display, upload UI, consumes the backend contract defined in [API.md](./API.md)

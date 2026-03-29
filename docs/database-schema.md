@@ -86,7 +86,7 @@ Purpose:
 
 - keep investor-facing queries fast and opinionated
 - expose ranking and trend fields without asking the frontend to aggregate raw awards
-- let the current browse routes read from the same source of truth as the investment APIs
+- provide a data layer for the REST and analytics routes documented in [API.md](/Users/antoniocoppe/code/sales-patriot-team-project/API.md)
 
 ## Investment-oriented views
 
@@ -139,9 +139,9 @@ Available import commands from `backend/`:
 
 ## What this means for the team
 
-- Backend can query `vendor_investment_summary` or `cage_code_investment_summary` for rankings.
-- The existing `/api/companies` and `/api/awards` routes now read from the core tables/views instead of demo-only tables.
-- Frontend and backend can align on investment endpoints without carrying a second storage model.
+- [API.md](/Users/antoniocoppe/code/sales-patriot-team-project/API.md) is the route contract source of truth.
+- Backend can query `vendor_investment_summary` or `cage_code_investment_summary` for rankings and investor-facing analytics.
+- The schema is designed to support the vendor, award, agency, NAICS, and analytics route families without carrying a separate demo storage model.
 
 ## Drizzle setup
 
@@ -159,5 +159,6 @@ Available commands from `backend/`:
 Important constraint:
 
 - [backend/src/db/schema.sql](/Users/antoniocoppe/code/sales-patriot-team-project/backend/src/db/schema.sql) remains the DDL source of truth right now.
+- [API.md](/Users/antoniocoppe/code/sales-patriot-team-project/API.md) remains the API contract source of truth.
 - The Drizzle schema mirrors the main tables for query-builder use and Studio access.
 - We are not using Drizzle-generated migrations as the canonical setup path yet, because the database also includes hand-authored SQL objects such as triggers and analytics views.
