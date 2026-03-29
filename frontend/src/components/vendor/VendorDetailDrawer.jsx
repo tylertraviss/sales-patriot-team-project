@@ -37,20 +37,20 @@ function StatCard({ label, value, sub }) {
   );
 }
 
-export default function VendorDetailDrawer({ uei, vendorName, open, onOpenChange }) {
+export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenChange }) {
   const [vendor, setVendor] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!open || !uei) return;
+    if (!open || !cageCode) return;
     setVendor(null);
     setSummary(null);
     setError(null);
     setLoading(true);
 
-    Promise.allSettled([getVendor(uei), getVendorSummary(uei)]).then(([vRes, sRes]) => {
+    Promise.allSettled([getVendor(cageCode), getVendorSummary(cageCode)]).then(([vRes, sRes]) => {
       if (vRes.status === 'fulfilled') setVendor(vRes.value);
       if (sRes.status === 'fulfilled') setSummary(sRes.value);
       if (vRes.status === 'rejected' && sRes.status === 'rejected') {
@@ -58,23 +58,14 @@ export default function VendorDetailDrawer({ uei, vendorName, open, onOpenChange
       }
       setLoading(false);
     });
-  }, [open, uei]);
+  }, [open, cageCode]);
 
-  // Helper: extract array from various summary shapes
-  function extract(key, ...fallbacks) {
-    if (!summary) return [];
-    for (const k of [key, ...fallbacks]) {
-      if (Array.isArray(summary[k]) && summary[k].length) return summary[k];
-    }
-    return [];
-  }
-
-  const spendByYear   = extract('byYear', 'spendByYear', 'yearlySpend', 'byFiscalYear');
-  const byAgency      = extract('byAgency', 'agencyBreakdown', 'agencies');
-  const byCompetition = extract('byCompetition', 'competitionBreakdown', 'extentCompeted');
+  const spendByYear   = summary?.byYear         ?? [];
+  const byAgency      = summary?.byAgency        ?? [];
+  const byCompetition = summary?.byCompetition   ?? [];
 
   const totalObligated = vendor?.totalObligated ?? summary?.totalObligated ?? null;
-  const awardCount     = vendor?.awardCount ?? summary?.awardCount ?? summary?.totalAwards ?? null;
+  const awardCount     = vendor?.awardCount     ?? summary?.awardCount     ?? null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -83,11 +74,11 @@ export default function VendorDetailDrawer({ uei, vendorName, open, onOpenChange
         {/* Header */}
         <SheetHeader className="space-y-1 pr-6">
           <SheetTitle className="text-xl leading-tight">
-            {vendorName ?? vendor?.vendorName ?? uei}
+            {vendorName ?? vendor?.name ?? cageCode}
           </SheetTitle>
           <SheetDescription className="flex items-center gap-2 flex-wrap">
-            {uei && <Badge variant="outline" className="font-mono text-xs">{uei}</Badge>}
-            {vendor?.cageCode && <Badge variant="outline" className="font-mono text-xs">CAGE: {vendor.cageCode}</Badge>}
+            {vendor?.uei && <Badge variant="outline" className="font-mono text-xs">UEI: {vendor.uei}</Badge>}
+            {cageCode && <Badge variant="outline" className="font-mono text-xs">CAGE: {cageCode}</Badge>}
             {vendor?.stateCode && <span className="text-xs">{vendor.stateCode}</span>}
           </SheetDescription>
         </SheetHeader>
@@ -159,7 +150,7 @@ export default function VendorDetailDrawer({ uei, vendorName, open, onOpenChange
             {/* Individual awards */}
             <Separator />
             <Section title="Contract Awards">
-              <VendorAwardsTable uei={uei} />
+              <VendorAwardsTable cageCode={cageCode} />
             </Section>
           </>
         )}

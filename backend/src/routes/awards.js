@@ -10,6 +10,25 @@ function paginate(page, limit) {
   return { page: p, limit: l, offset: (p - 1) * l };
 }
 
+// GET /api/awards/headers — static column definitions for the AwardsTable component
+router.get('/headers', (_req, res) => {
+  res.json({
+    headers: [
+      { key: 'piid',            label: 'Contract ID',   type: 'text'     },
+      { key: 'dollarsObligated',label: 'Obligated',     type: 'currency' },
+      { key: 'dateSigned',      label: 'Date Signed',   type: 'date'     },
+      { key: 'awardType',       label: 'Type',          type: 'text'     },
+      { key: 'agencyName',      label: 'Agency',        type: 'text'     },
+      { key: 'naicsCode',       label: 'NAICS',         type: 'text'     },
+      { key: 'stateCode',       label: 'State',         type: 'text'     },
+      { key: 'extentCompetedName', label: 'Competition',type: 'text'     },
+      { key: 'setAsideName',    label: 'Set-Aside',     type: 'text'     },
+      { key: 'vendorName',      label: 'Vendor',        type: 'text'     },
+      { key: 'vendorCage',      label: 'CAGE',          type: 'text'     },
+    ],
+  });
+});
+
 // GET /api/awards
 router.get('/', async (req, res, next) => {
   try {
@@ -67,25 +86,25 @@ router.get('/', async (req, res, next) => {
       db.query(`
         SELECT
           a.piid,
-          a.modification_number,
-          a.award_amount           AS dollars_obligated,
-          a.award_date,
-          a.date_signed,
-          a.award_type_description AS award_type,
-          a.naics_code,
-          a.naics_description,
-          a.product_service_code,
-          a.contracting_agency_code AS agency_code,
-          a.contracting_agency_name AS agency_name,
-          a.place_of_performance_state_code AS state_code,
-          a.set_aside_code,
-          a.set_aside_name,
-          a.extent_competed_code,
-          a.extent_competed_name,
-          a.description_of_requirement,
-          v.cage_code               AS vendor_cage,
-          v.uei                     AS vendor_uei,
-          v.vendor_name             AS vendor_name
+          a.modification_number                             AS "modificationNumber",
+          a.award_amount                                    AS "dollarsObligated",
+          a.award_date                                      AS "awardDate",
+          a.date_signed                                     AS "dateSigned",
+          a.award_type_description                          AS "awardType",
+          a.naics_code                                      AS "naicsCode",
+          a.naics_description                               AS "naicsDescription",
+          a.product_service_code                            AS "productServiceCode",
+          a.contracting_agency_code                         AS "agencyCode",
+          a.contracting_agency_name                         AS "agencyName",
+          a.place_of_performance_state_code                 AS "stateCode",
+          a.set_aside_code                                  AS "setAsideCode",
+          a.set_aside_name                                  AS "setAsideName",
+          a.extent_competed_code                            AS "extentCompetedCode",
+          a.extent_competed_name                            AS "extentCompetedName",
+          a.description_of_requirement                      AS "description",
+          v.cage_code                                       AS "vendorCage",
+          v.uei                                             AS "vendorUei",
+          v.vendor_name                                     AS "vendorName"
         FROM award_transactions a
         JOIN vendor_entities v ON v.vendor_id = a.vendor_id
         ${where}

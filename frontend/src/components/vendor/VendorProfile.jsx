@@ -5,21 +5,9 @@ import { Separator } from '@/components/ui/separator';
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const fmtNum = new Intl.NumberFormat('en-US');
 
-const DIVERSITY_FLAGS = [
-  { key: 'smallBusinessFlag',         label: 'Small Business',           variant: 'default' },
-  { key: 'wosbFlag',                  label: 'WOSB',                     variant: 'secondary' },
-  { key: 'edwosbFlag',                label: 'EDWOSB',                   variant: 'secondary' },
-  { key: 'veteranOwnedFlag',          label: 'Veteran-Owned',            variant: 'secondary' },
-  { key: 'sdvobFlag',                 label: 'Service-Disabled Veteran', variant: 'secondary' },
-  { key: 'hubzoneCertFlag',           label: 'HUBZone',                  variant: 'secondary' },
-  { key: 'eightAFlag',                label: '8(a)',                     variant: 'secondary' },
-  { key: 'sdbFlag',                   label: 'SDB',                      variant: 'secondary' },
-  { key: 'minorityOwnedFlag',         label: 'Minority-Owned',           variant: 'outline' },
-  { key: 'hispanicOwnedFlag',         label: 'Hispanic-Owned',           variant: 'outline' },
-  { key: 'nativeAmericanOwnedFlag',   label: 'Native American-Owned',    variant: 'outline' },
-  { key: 'emergingSmallBusinessFlag', label: 'Emerging Small Business',  variant: 'outline' },
-];
-
+// socioEconomicIndicator is a single code from the DB (e.g. "A", "27", "2J" etc.)
+// We surface it as a plain badge rather than trying to map individual boolean flags
+// that don't exist in the real backend response.
 function Stat({ icon: Icon, label, value }) {
   if (!value) return null;
   return (
@@ -36,13 +24,9 @@ function Stat({ icon: Icon, label, value }) {
 export default function VendorProfile({ vendor }) {
   if (!vendor) return null;
 
-  const location = [vendor.city, vendor.stateCode, vendor.countryName]
+  const location = [vendor.stateCode, vendor.countryCode]
     .filter(Boolean)
     .join(', ');
-
-  const activeDiversity = DIVERSITY_FLAGS.filter(
-    (f) => vendor[f.key] === true || vendor[f.key] === 'Y' || vendor[f.key] === 'YES'
-  );
 
   return (
     <div className="space-y-4">
@@ -50,9 +34,6 @@ export default function VendorProfile({ vendor }) {
       <div className="space-y-3">
         <Stat icon={Building2} label="UEI / CAGE" value={[vendor.uei, vendor.cageCode].filter(Boolean).join(' · ')} />
         {location && <Stat icon={MapPin} label="Location" value={location} />}
-        {vendor.parentCompanyName && (
-          <Stat icon={Building2} label="Parent Company" value={vendor.parentCompanyName} />
-        )}
         {vendor.numberOfEmployees && (
           <Stat icon={Users} label="Employees" value={fmtNum.format(vendor.numberOfEmployees)} />
         )}
@@ -61,21 +42,17 @@ export default function VendorProfile({ vendor }) {
         )}
       </div>
 
-      {/* Diversity / certifications */}
-      {activeDiversity.length > 0 && (
+      {/* Socio-economic indicator badge */}
+      {vendor.socioEconomicIndicator && (
         <>
           <Separator />
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-              Certifications & Set-Asides
+              Socio-Economic Indicator
             </p>
-            <div className="flex flex-wrap gap-1.5">
-              {activeDiversity.map((f) => (
-                <Badge key={f.key} variant={f.variant} className="text-xs">
-                  {f.label}
-                </Badge>
-              ))}
-            </div>
+            <Badge variant="secondary" className="text-xs font-mono">
+              {vendor.socioEconomicIndicator}
+            </Badge>
           </div>
         </>
       )}

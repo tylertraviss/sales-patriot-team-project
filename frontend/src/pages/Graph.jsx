@@ -174,7 +174,7 @@ export default function Graph() {
       )}
 
       <VendorDetailDrawer
-        uei={selectedVendor?.uei}
+        cageCode={selectedVendor?.cageCode}
         vendorName={selectedVendor?.vendorName}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}

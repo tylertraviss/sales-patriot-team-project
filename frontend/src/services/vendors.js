@@ -3,40 +3,30 @@ import {
   mockGetVendorSummary,
   mockGetVendorAwards,
 } from './mockApi';
+import { getVendor as apiGetVendor, getVendorSummary as apiGetVendorSummary, getVendorAwards as apiGetVendorAwards } from './api';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 
-async function apiFetch(path, params = {}) {
-  const url = new URL(`${BASE_URL}${path}`);
-  Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
-  });
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json();
-}
-
-/** GET /api/vendors/:uei — single vendor profile */
-export function getVendor(uei) {
-  if (USE_MOCK) return mockGetVendor(uei);
-  return apiFetch(`/vendors/${uei}`);
+/** GET /api/vendors/:cage_code — single vendor profile */
+export function getVendor(cageCode) {
+  if (USE_MOCK) return mockGetVendor(cageCode);
+  return apiGetVendor(cageCode);
 }
 
 /**
- * GET /api/vendors/:uei/awards/summary
- * Returns aggregate breakdown: by year, agency, NAICS, competition, etc.
+ * GET /api/vendors/:cage_code/awards/summary
+ * Returns aggregate breakdown: by year, agency, competition, etc.
  */
-export function getVendorSummary(uei) {
-  if (USE_MOCK) return mockGetVendorSummary(uei);
-  return apiFetch(`/vendors/${uei}/awards/summary`);
+export function getVendorSummary(cageCode) {
+  if (USE_MOCK) return mockGetVendorSummary(cageCode);
+  return apiGetVendorSummary(cageCode);
 }
 
 /**
- * GET /api/vendors/:uei/awards
+ * GET /api/vendors/:cage_code/awards
  * Paginated list of individual contracts.
  */
-export function getVendorAwards(uei, params = {}) {
-  if (USE_MOCK) return mockGetVendorAwards(uei, params);
-  return apiFetch(`/vendors/${uei}/awards`, params);
+export function getVendorAwards(cageCode, params = {}) {
+  if (USE_MOCK) return mockGetVendorAwards(cageCode, params);
+  return apiGetVendorAwards(cageCode, params);
 }

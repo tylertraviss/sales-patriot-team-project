@@ -214,8 +214,8 @@ export default function NaicsGraph({ graphData, selectedSector, onVendorClick })
   }, []);
 
   const handleNodeClick = useCallback((node) => {
-    if (node?.type === 'vendor' && node.uei && onVendorClick)
-      onVendorClick({ uei: node.uei, vendorName: node.label });
+    if (node?.type === 'vendor' && node.cageCode && onVendorClick)
+      onVendorClick({ cageCode: node.cageCode, vendorName: node.label });
   }, [onVendorClick]);
 
   if (!graphData?.nodes?.length) return (

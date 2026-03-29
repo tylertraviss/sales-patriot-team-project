@@ -21,40 +21,48 @@ export async function getAwardHeaders() {
 }
 
 /**
- * Fetch paginated awards, optionally filtered by CAGE code.
- * @param {object} params - { cageCode, page, limit, sortBy, sortDir }
+ * Fetch paginated awards with optional filters.
+ * @param {object} params - { page, limit, sort, order, year, agencyCode, naicsCode, stateCode, ... }
  */
 export async function getAwards(params = {}) {
   const { data } = await api.get('/awards', { params });
   return data; // { data, pagination }
 }
 
-/**
- * Fetch awards for a specific CAGE code.
- */
-export async function getAwardsByCageCode(cageCode, params = {}) {
-  const { data } = await api.get(`/awards/${cageCode}`, { params });
-  return data;
-}
-
 // ---------------------------------------------------------------------------
-// Companies
+// Vendors
 // ---------------------------------------------------------------------------
 
 /**
- * Search / list companies.
- * @param {object} params - { search, page, limit }
+ * Search / list vendors.
+ * @param {object} params - { search, state_code, naics_code, agency_code, set_aside_code, year, page, limit, sort, order }
  */
-export async function getCompanies(params = {}) {
-  const { data } = await api.get('/companies', { params });
+export async function getVendors(params = {}) {
+  const { data } = await api.get('/vendors', { params });
+  return data; // { data, pagination }
+}
+
+/**
+ * Fetch a single vendor by CAGE code.
+ */
+export async function getVendor(cageCode) {
+  const { data } = await api.get(`/vendors/${cageCode}`);
   return data;
 }
 
 /**
- * Fetch a single company by CAGE code.
+ * Fetch awards for a specific vendor by CAGE code.
  */
-export async function getCompany(cageCode) {
-  const { data } = await api.get(`/companies/${cageCode}`);
+export async function getVendorAwards(cageCode, params = {}) {
+  const { data } = await api.get(`/vendors/${cageCode}/awards`, { params });
+  return data;
+}
+
+/**
+ * Fetch award summary (by year, agency, competition) for a vendor by CAGE code.
+ */
+export async function getVendorSummary(cageCode) {
+  const { data } = await api.get(`/vendors/${cageCode}/awards/summary`);
   return data;
 }
 
@@ -79,8 +87,7 @@ export async function uploadCSV(file, onProgress) {
         onProgress(percent);
       }
     },
-    // Large files need a longer timeout
-    timeout: 10 * 60 * 1000, // 10 minutes
+    timeout: 10 * 60 * 1000,
   });
 
   return data;

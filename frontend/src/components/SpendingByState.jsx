@@ -1,20 +1,7 @@
-// Temporary: seeded with real CSV data (2010).
-// Replace MOCK_DATA with: getAwards({ sort: 'dollarsObligated', order: 'desc' }) grouped by state
-
+import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
-const MOCK_DATA = [
-  { state: 'PA', total: 722134699 },
-  { state: 'MI', total: 137210064 },
-  { state: 'VA', total: 124256548 },
-  { state: 'MD', total: 70104439  },
-  { state: 'WI', total: 67304612  },
-  { state: 'CA', total: 59284126  },
-  { state: 'NY', total: 57245021  },
-  { state: 'KS', total: 47496597  },
-  { state: 'FL', total: 45075364  },
-  { state: 'AZ', total: 39578550  },
-];
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe', '#e0f2fe', '#f0f9ff', '#f8fafc', '#f1f5f9', '#e2e8f0'];
 
@@ -25,6 +12,23 @@ function fmt(n) {
 }
 
 export default function SpendingByState() {
+  const [data, setData]       = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${BASE_URL}/analytics/geographic-clustering?limit=10`)
+      .then((r) => r.ok ? r.json() : { data: [] })
+      .then((json) => {
+        const rows = (json.data ?? []).slice(0, 10).map((s) => ({
+          state: s.stateCode,
+          total: parseFloat(s.totalObligated) || 0,
+        }));
+        setData(rows);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-6 flex flex-col gap-4">
       <div>
@@ -32,24 +36,27 @@ export default function SpendingByState() {
         <p className="text-sm text-gray-400 mt-0.5">Where the money is going geographically.</p>
       </div>
 
-      <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={MOCK_DATA} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
-          <XAxis dataKey="state" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={fmt} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={48} />
-          <Tooltip
-            formatter={(v) => [fmt(v), 'Obligated']}
-            contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: 'none' }}
-            cursor={{ fill: '#f9fafb' }}
-          />
-          <Bar dataKey="total" radius={[4, 4, 0, 0]}>
-            {MOCK_DATA.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      {loading ? (
+        <div className="h-[240px] flex items-center justify-center text-gray-400 text-sm">Loading…</div>
+      ) : (
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={data} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
+            <XAxis dataKey="state" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={fmt} tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} width={48} />
+            <Tooltip
+              formatter={(v) => [fmt(v), 'Obligated']}
+              contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: 'none' }}
+              cursor={{ fill: '#f9fafb' }}
+            />
+            <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+              {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      )}
 
       <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
         Top 10 states by dollars obligated
-        <span className="ml-2 italic text-amber-500">— sample data, 2010</span>
       </p>
     </div>
   );

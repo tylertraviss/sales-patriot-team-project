@@ -40,9 +40,11 @@ app.get('/health', (_req, res) => {
 
 app.get('/health/db', async (_req, res, next) => {
   try {
-    // TODO: run a lightweight DB ping e.g. SELECT 1
+    const db = require('./db/connection');
+    await db.query('SELECT 1');
     res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() });
   } catch (err) {
+    res.status(503).json({ status: 'error', db: 'unreachable', timestamp: new Date().toISOString() });
     next(err);
   }
 });

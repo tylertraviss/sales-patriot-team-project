@@ -6,9 +6,6 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -21,7 +18,35 @@ function competitionVariant(val) {
   return 'secondary';
 }
 
-export default function VendorAwardsTable({ uei }) {
+const cols = [
+  { key: 'piid',              label: 'Contract ID',  width: 'w-[140px]' },
+  { key: 'dollarsObligated',  label: 'Obligated',    width: 'w-[120px]', align: 'right' },
+  { key: 'dateSigned',        label: 'Date Signed',  width: 'w-[110px]' },
+  { key: 'awardType',         label: 'Type',         width: 'w-[120px]' },
+  { key: 'agencyCode',        label: 'Agency',       width: 'w-[90px]' },
+  { key: 'extentCompetedName',label: 'Competition',  width: '' },
+  { key: 'setAsideName',      label: 'Set-Aside',    width: 'w-[100px]' },
+];
+
+function cellValue(row, key) {
+  const v = row[key];
+  if (v === null || v === undefined || v === '') return <span className="text-muted-foreground">—</span>;
+  if (key === 'dollarsObligated') return <span className="tabular-nums">{fmt.format(Number(v))}</span>;
+  if (key === 'dateSigned') return String(v).slice(0, 10);
+  if (key === 'extentCompetedName') {
+    const label = String(v)
+      .replace('FULL AND OPEN COMPETITION AFTER EXCLUSION OF SOURCES', 'Full & Open (Excl.)')
+      .replace('FULL AND OPEN COMPETITION', 'Full & Open')
+      .replace('NOT AVAILABLE FOR COMPETITION', 'Not Competed');
+    return <Badge variant={competitionVariant(String(v))} className="text-xs whitespace-nowrap">{label}</Badge>;
+  }
+  if (key === 'setAsideName' && v !== 'NONE' && v !== 'N/A') {
+    return <Badge variant="secondary" className="text-xs">{v}</Badge>;
+  }
+  return <span className="truncate max-w-[160px] block" title={String(v)}>{String(v)}</span>;
+}
+
+export default function VendorAwardsTable({ cageCode }) {
   const [awards, setAwards] = useState([]);
   const [meta, setMeta] = useState(null);
   const [page, setPage] = useState(1);
@@ -29,14 +54,15 @@ export default function VendorAwardsTable({ uei }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetch = useCallback(async () => {
+  const fetchAwards = useCallback(async () => {
+    if (!cageCode) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await getVendorAwards(uei, {
+      const res = await getVendorAwards(cageCode, {
         page,
         limit,
-        sort: 'dollarsObligated',
+        sort: 'award_amount',
         order: 'desc',
       });
       setAwards(res.data ?? []);
@@ -46,34 +72,9 @@ export default function VendorAwardsTable({ uei }) {
     } finally {
       setLoading(false);
     }
-  }, [uei, page, limit]);
+  }, [cageCode, page, limit]);
 
-  useEffect(() => { fetch(); }, [fetch]);
-
-  const cols = [
-    { key: 'piid',             label: 'Contract ID',  width: 'w-[140px]' },
-    { key: 'dollarsObligated', label: 'Obligated',    width: 'w-[120px]', align: 'right' },
-    { key: 'dateSigned',       label: 'Date Signed',  width: 'w-[110px]' },
-    { key: 'awardType',        label: 'Type',         width: 'w-[120px]' },
-    { key: 'agencyCode',       label: 'Agency',       width: 'w-[90px]' },
-    { key: 'extentCompeted',   label: 'Competition',  width: '' },
-    { key: 'setAsideType',     label: 'Set-Aside',    width: 'w-[100px]' },
-  ];
-
-  function cellValue(row, key) {
-    const v = row[key] ?? row[key.replace(/([A-Z])/g, '_$1').toLowerCase()];
-    if (v === null || v === undefined || v === '') return <span className="text-muted-foreground">—</span>;
-    if (key === 'dollarsObligated') return <span className="tabular-nums">{fmt.format(Number(v))}</span>;
-    if (key === 'dateSigned') return String(v).slice(0, 10);
-    if (key === 'extentCompeted') {
-      const label = String(v).replace('FULL AND OPEN COMPETITION AFTER EXCLUSION OF SOURCES', 'Full & Open (Excl.)').replace('FULL AND OPEN COMPETITION', 'Full & Open').replace('NOT AVAILABLE FOR COMPETITION', 'Not Competed');
-      return <Badge variant={competitionVariant(String(v))} className="text-xs whitespace-nowrap">{label}</Badge>;
-    }
-    if (key === 'setAsideType' && v !== 'NONE' && v !== 'N/A') {
-      return <Badge variant="secondary" className="text-xs">{v}</Badge>;
-    }
-    return <span className="truncate max-w-[160px] block" title={String(v)}>{String(v)}</span>;
-  }
+  useEffect(() => { fetchAwards(); }, [fetchAwards]);
 
   return (
     <div className="space-y-2">
@@ -113,7 +114,7 @@ export default function VendorAwardsTable({ uei }) {
               </TableRow>
             )}
             {!loading && !error && awards.map((row, i) => (
-              <TableRow key={row.piid ?? row.contractId ?? i}>
+              <TableRow key={row.piid ?? i}>
                 {cols.map((c) => (
                   <TableCell key={c.key} className={cn(c.align === 'right' && 'text-right', 'text-xs py-2')}>
                     {cellValue(row, c.key)}
