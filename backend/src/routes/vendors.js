@@ -1,307 +1,387 @@
 const express = require('express');
-const router  = express.Router();
-const db      = require('../db/connection');
 
-const ALLOWED_SORT = new Set(['name', 'annual_revenue', 'number_of_employees', 'total_obligated', 'award_count']);
+const router = express.Router();
+const db = require('../db/connection');
+
+const SORT_KEY_MAP = {
+  name: 'name',
+  annual_revenue: 'annual_revenue',
+  annualRevenue: 'annual_revenue',
+  number_of_employees: 'number_of_employees',
+  numberOfEmployees: 'number_of_employees',
+  total_obligated: 'total_obligated',
+  totalObligated: 'total_obligated',
+  award_count: 'award_count',
+  awardCount: 'award_count',
+};
 
 function paginate(page, limit) {
-  const p = Math.max(1, parseInt(page, 10) || 1);
-  const l = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+  const p = Math.max(1, Number.parseInt(page, 10) || 1);
+  const l = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 25));
   return { page: p, limit: l, offset: (p - 1) * l };
 }
 
 function toSortCol(sort) {
   const map = {
-    name:                'v.vendor_name',
-    annual_revenue:      'v.annual_revenue',
+    name: 'v.vendor_name',
+    annual_revenue: 'v.annual_revenue',
     number_of_employees: 'v.number_of_employees',
-    total_obligated:     'COALESCE(s.total_obligated_amount, 0)',
-    award_count:         'COALESCE(s.award_count, 0)',
+    total_obligated: 'COALESCE(s.total_obligated_amount, 0)',
+    award_count: 'COALESCE(s.award_count, 0)',
   };
-  return map[sort] || map['total_obligated'];
+
+  return map[sort] || map.total_obligated;
 }
 
-// GET /api/vendors
+function fiscalYearExpr(alias = 'a') {
+  return `COALESCE(${alias}.award_fiscal_year, ${alias}.contract_fiscal_year, EXTRACT(YEAR FROM COALESCE(${alias}.award_date, ${alias}.date_signed, ${alias}.reveal_date))::INT)`;
+}
+
+function buildVendorAwardExistence(query, { vendorAlias = 'v', values = [] } = {}) {
+  const conditions = [`a.vendor_id = ${vendorAlias}.vendor_id`];
+
+  if (query.naics_code) {
+    values.push(String(query.naics_code).trim().toUpperCase());
+    conditions.push(`a.naics_code = $${values.length}`);
+  }
+
+  if (query.agency_code) {
+    values.push(String(query.agency_code).trim().toUpperCase());
+    conditions.push(`a.contracting_agency_code = $${values.length}`);
+  }
+
+  if (query.set_aside_code) {
+    values.push(String(query.set_aside_code).trim().toUpperCase());
+    conditions.push(`a.set_aside_code = $${values.length}`);
+  }
+
+  if (query.year) {
+    values.push(Number.parseInt(query.year, 10));
+    conditions.push(`${fiscalYearExpr('a')} = $${values.length}`);
+  }
+
+  return {
+    clause: `EXISTS (SELECT 1 FROM award_transactions a WHERE ${conditions.join(' AND ')})`,
+    values,
+  };
+}
+
+async function findVendor(whereClause, params) {
+  const result = await db.query(
+    `SELECT
+       v.vendor_id AS "vendorId",
+       v.cage_code AS "cageCode",
+       v.uei,
+       v.vendor_name AS name,
+       v.city,
+       v.congressional_district AS "congressionalDistrict",
+       v.state_code AS "stateCode",
+       v.state_name AS "stateName",
+       v.country_code AS "countryCode",
+       v.country_name AS "countryName",
+       v.socio_economic_indicator AS "socioEconomicIndicator",
+       v.annual_revenue AS "annualRevenue",
+       v.number_of_employees AS "numberOfEmployees",
+       v.vendor_registration_date AS "registrationDate",
+       COALESCE(s.award_count, 0) AS "awardCount",
+       COALESCE(s.total_obligated_amount, 0) AS "totalObligated",
+       s.latest_fiscal_year AS "latestFiscalYear"
+     FROM vendor_entities v
+     LEFT JOIN vendor_investment_summary s ON s.vendor_id = v.vendor_id
+     WHERE ${whereClause}
+     LIMIT 1`,
+    params,
+  );
+
+  return result.rows[0] || null;
+}
+
+async function buildVendorAwardSummary(vendor) {
+  const vendorId = vendor.vendorId;
+
+  const [byYear, byAgency, byCompetition, byAwardType, totals] = await Promise.all([
+    db.query(
+      `SELECT
+         ${fiscalYearExpr('a')} AS "fiscalYear",
+         SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+         COUNT(*)::INT AS "awardCount"
+       FROM award_transactions a
+       WHERE a.vendor_id = $1
+         AND ${fiscalYearExpr('a')} IS NOT NULL
+       GROUP BY ${fiscalYearExpr('a')}
+       ORDER BY "fiscalYear" ASC`,
+      [vendorId],
+    ),
+    db.query(
+      `SELECT
+         a.contracting_agency_code AS "agencyCode",
+         COALESCE(MAX(a.contracting_agency_name), a.contracting_agency_code) AS "agencyName",
+         SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+         COUNT(*)::INT AS "awardCount"
+       FROM award_transactions a
+       WHERE a.vendor_id = $1
+         AND a.contracting_agency_code IS NOT NULL
+         AND BTRIM(a.contracting_agency_code) <> ''
+       GROUP BY a.contracting_agency_code
+       ORDER BY "totalObligated" DESC
+       LIMIT 10`,
+      [vendorId],
+    ),
+    db.query(
+      `SELECT
+         COALESCE(a.extent_competed_code, 'UNKNOWN') AS "extentCompetedCode",
+         COALESCE(a.extent_competed_name, 'Unknown') AS "extentCompetedName",
+         COUNT(*)::INT AS "awardCount",
+         SUM(COALESCE(a.award_amount, 0)) AS "totalObligated"
+       FROM award_transactions a
+       WHERE a.vendor_id = $1
+       GROUP BY COALESCE(a.extent_competed_code, 'UNKNOWN'), COALESCE(a.extent_competed_name, 'Unknown')
+       ORDER BY "awardCount" DESC`,
+      [vendorId],
+    ),
+    db.query(
+      `SELECT
+         COALESCE(NULLIF(a.award_type_description, ''), 'Unknown') AS "awardType",
+         SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+         COUNT(*)::INT AS "awardCount"
+       FROM award_transactions a
+       WHERE a.vendor_id = $1
+       GROUP BY COALESCE(NULLIF(a.award_type_description, ''), 'Unknown')
+       ORDER BY "totalObligated" DESC
+       LIMIT 8`,
+      [vendorId],
+    ),
+    db.query(
+      `SELECT
+         COUNT(*)::INT AS "awardCount",
+         SUM(COALESCE(a.award_amount, 0)) AS "totalObligated"
+       FROM award_transactions a
+       WHERE a.vendor_id = $1`,
+      [vendorId],
+    ),
+  ]);
+
+  return {
+    vendorId,
+    cageCode: vendor.cageCode,
+    uei: vendor.uei,
+    name: vendor.name,
+    totalObligated: totals.rows[0]?.totalObligated ?? 0,
+    awardCount: Number(totals.rows[0]?.awardCount ?? 0),
+    byYear: byYear.rows,
+    byAgency: byAgency.rows,
+    byCompetition: byCompetition.rows,
+    byAwardType: byAwardType.rows,
+  };
+}
+
+async function listVendorAwards(vendorId, query) {
+  const { page, limit, offset } = paginate(query.page, query.limit);
+  const allowed = new Set(['award_amount', 'award_date', 'date_signed']);
+  const sort = allowed.has(query.sort) ? query.sort : 'award_date';
+  const order = String(query.order || 'desc').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+  const [dataResult, countResult] = await Promise.all([
+    db.query(
+      `SELECT
+         a.award_tx_id AS "awardTxId",
+         a.piid,
+         a.modification_number AS "modificationNumber",
+         a.award_amount AS "dollarsObligated",
+         a.award_date AS "awardDate",
+         a.date_signed AS "dateSigned",
+         a.award_type_description AS "awardType",
+         a.naics_code AS "naicsCode",
+         a.naics_description AS "naicsDescription",
+         a.product_service_code AS "productServiceCode",
+         a.contracting_agency_code AS "agencyCode",
+         a.contracting_agency_name AS "agencyName",
+         a.place_of_performance_state_code AS "stateCode",
+         a.set_aside_code AS "setAsideCode",
+         a.set_aside_name AS "setAsideName",
+         a.extent_competed_code AS "extentCompetedCode",
+         a.extent_competed_name AS "extentCompetedName",
+         a.description_of_requirement AS "description"
+       FROM award_transactions a
+       WHERE a.vendor_id = $1
+       ORDER BY ${sort} ${order}
+       LIMIT $2 OFFSET $3`,
+      [vendorId, limit, offset],
+    ),
+    db.query(
+      `SELECT COUNT(*)::INT AS total FROM award_transactions WHERE vendor_id = $1`,
+      [vendorId],
+    ),
+  ]);
+
+  return {
+    data: dataResult.rows,
+    pagination: {
+      page,
+      limit,
+      total: Number(countResult.rows[0].total || 0),
+      totalPages: Math.ceil(Number(countResult.rows[0].total || 0) / limit),
+    },
+  };
+}
+
 router.get('/', async (req, res, next) => {
   try {
-    const {
-      search, state_code, country_code,
-      naics_code, agency_code, set_aside_code, year,
-      sort = 'total_obligated', order = 'asc',
-      page, limit,
-    } = req.query;
+    const { search, state_code, country_code, sort = 'total_obligated', order = 'desc', page, limit } = req.query;
+    const paging = paginate(page, limit);
+    const sortKey = SORT_KEY_MAP[sort] || 'total_obligated';
+    const direction = String(order || 'desc').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-    const { page: p, limit: l, offset } = paginate(page, limit);
-    const col = ALLOWED_SORT.has(sort) ? sort : 'total_obligated';
-    const dir = order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-
+    const values = [];
     const conditions = [];
-    const values     = [];
 
     if (search) {
       values.push(search);
       conditions.push(`v.vendor_name ILIKE '%' || $${values.length} || '%'`);
     }
+
     if (state_code) {
-      values.push(state_code.toUpperCase());
+      values.push(String(state_code).trim().toUpperCase());
       conditions.push(`v.state_code = $${values.length}`);
     }
+
     if (country_code) {
-      values.push(country_code.toUpperCase());
+      values.push(String(country_code).trim().toUpperCase());
       conditions.push(`v.country_code = $${values.length}`);
     }
-    if (naics_code) {
-      values.push(naics_code);
-      conditions.push(`EXISTS (
-        SELECT 1 FROM award_transactions a
-        WHERE a.vendor_id = v.vendor_id AND a.naics_code = $${values.length}
-      )`);
-    }
-    if (agency_code) {
-      values.push(agency_code);
-      conditions.push(`EXISTS (
-        SELECT 1 FROM award_transactions a
-        WHERE a.vendor_id = v.vendor_id AND a.contracting_agency_code = $${values.length}
-      )`);
-    }
-    if (set_aside_code) {
-      values.push(set_aside_code);
-      conditions.push(`EXISTS (
-        SELECT 1 FROM award_transactions a
-        WHERE a.vendor_id = v.vendor_id AND a.set_aside_code = $${values.length}
-      )`);
-    }
-    if (year) {
-      values.push(parseInt(year, 10));
-      conditions.push(`EXISTS (
-        SELECT 1 FROM award_transactions a
-        WHERE a.vendor_id = v.vendor_id
-          AND COALESCE(a.award_fiscal_year, a.contract_fiscal_year) = $${values.length}
-      )`);
+
+    if (req.query.naics_code || req.query.agency_code || req.query.set_aside_code || req.query.year) {
+      const exists = buildVendorAwardExistence(req.query, { vendorAlias: 'v', values });
+      conditions.push(exists.clause);
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const [dataResult, countResult] = await Promise.all([
-      db.query(`
-        SELECT
-          v.cage_code                                     AS "cageCode",
-          v.uei,
-          v.vendor_name                                   AS "name",
-          v.city                                          AS "city",
-          v.state_code                                    AS "stateCode",
-          v.country_code                                  AS "countryCode",
-          v.socio_economic_indicator                      AS "socioEconomicIndicator",
-          v.annual_revenue                                AS "annualRevenue",
-          v.number_of_employees                           AS "numberOfEmployees",
-          v.vendor_registration_date                      AS "registrationDate",
-          COALESCE(s.award_count, 0)                      AS "awardCount",
-          COALESCE(s.total_obligated_amount, 0)           AS "totalObligated"
-        FROM vendor_entities v
-        LEFT JOIN vendor_investment_summary s ON s.cage_code = v.cage_code
-        ${where}
-        ORDER BY ${toSortCol(col)} ${dir}
-        LIMIT $${values.length + 1} OFFSET $${values.length + 2}
-      `, [...values, l, offset]),
-      db.query(`
-        SELECT COUNT(*) AS total
-        FROM vendor_entities v
-        ${where}
-      `, values),
-    ]);
-
-    res.json({
-      data: dataResult.rows,
-      pagination: {
-        page: p, limit: l,
-        total: parseInt(countResult.rows[0].total, 10),
-        totalPages: Math.ceil(countResult.rows[0].total / l),
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// GET /api/vendors/:cage_code_or_uei
-// Accepts either a CAGE code or a UEI as the path parameter.
-router.get('/:cage_code', async (req, res, next) => {
-  try {
-    const { cage_code } = req.params;
-    const id = cage_code.toUpperCase();
-
-    const result = await db.query(`
-      SELECT
-        v.cage_code                                       AS "cageCode",
-        v.uei,
-        v.vendor_name                                     AS "name",
-        v.state_code                                      AS "stateCode",
-        v.country_code                                    AS "countryCode",
-        v.socio_economic_indicator                        AS "socioEconomicIndicator",
-        v.annual_revenue                                  AS "annualRevenue",
-        v.number_of_employees                             AS "numberOfEmployees",
-        v.vendor_registration_date                        AS "registrationDate",
-        COALESCE(s.award_count, 0)                        AS "awardCount",
-        COALESCE(s.total_obligated_amount, 0)             AS "totalObligated"
-      FROM vendor_entities v
-      LEFT JOIN vendor_investment_summary s ON s.cage_code = v.cage_code
-      WHERE v.cage_code = $1 OR v.uei = $1
-    `, [id]);
-
-    if (!result.rows.length) {
-      return res.status(404).json({ error: { status: 404, message: `Vendor ${cage_code} not found` } });
-    }
-
-    res.json(result.rows[0]);
-  } catch (err) {
-    next(err);
-  }
-});
-
-// GET /api/vendors/:cage_code/awards/summary
-router.get('/:cage_code/awards/summary', async (req, res, next) => {
-  try {
-    const { cage_code } = req.params;
-    const id = cage_code.toUpperCase();
-
-    const vendorCheck = await db.query(
-      `SELECT vendor_id FROM vendor_entities WHERE cage_code = $1 OR uei = $1`,
-      [id]
-    );
-    if (!vendorCheck.rows.length) {
-      return res.status(404).json({ error: { status: 404, message: `Vendor ${cage_code} not found` } });
-    }
-    const { vendor_id } = vendorCheck.rows[0];
-
-    const [byYear, byAgency, byCompetition, totals] = await Promise.all([
-      // Spend by fiscal year
-      db.query(`
-        SELECT
-          COALESCE(award_fiscal_year, contract_fiscal_year) AS "fiscalYear",
-          SUM(award_amount)                                  AS "totalObligated",
-          COUNT(*)                                           AS "awardCount"
-        FROM award_transactions
-        WHERE vendor_id = $1
-          AND COALESCE(award_fiscal_year, contract_fiscal_year) IS NOT NULL
-        GROUP BY "fiscalYear"
-        ORDER BY "fiscalYear" ASC
-      `, [vendor_id]),
-
-      // By agency
-      db.query(`
-        SELECT
-          contracting_agency_code AS "agencyCode",
-          contracting_agency_name AS "agencyName",
-          SUM(award_amount)       AS "totalObligated",
-          COUNT(*)                AS "awardCount"
-        FROM award_transactions
-        WHERE vendor_id = $1
-          AND contracting_agency_code IS NOT NULL
-        GROUP BY contracting_agency_code, contracting_agency_name
-        ORDER BY "totalObligated" DESC
-        LIMIT 10
-      `, [vendor_id]),
-
-      // By competition (extent competed)
-      db.query(`
-        SELECT
-          extent_competed_code AS "extentCompetedCode",
-          extent_competed_name AS "extentCompetedName",
-          COUNT(*)             AS "awardCount",
-          SUM(award_amount)    AS "totalObligated"
-        FROM award_transactions
-        WHERE vendor_id = $1
-          AND extent_competed_code IS NOT NULL
-        GROUP BY extent_competed_code, extent_competed_name
-        ORDER BY "awardCount" DESC
-      `, [vendor_id]),
-
-      // Totals
-      db.query(`
-        SELECT
-          COUNT(*)          AS "awardCount",
-          SUM(award_amount) AS "totalObligated"
-        FROM award_transactions
-        WHERE vendor_id = $1
-      `, [vendor_id]),
-    ]);
-
-    res.json({
-      cageCode:       cage_code.toUpperCase(),
-      totalObligated: totals.rows[0]?.totalObligated ?? 0,
-      awardCount:     parseInt(totals.rows[0]?.awardCount ?? 0, 10),
-      byYear:         byYear.rows,
-      byAgency:       byAgency.rows,
-      byCompetition:  byCompetition.rows,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// GET /api/vendors/:cage_code/awards
-router.get('/:cage_code/awards', async (req, res, next) => {
-  try {
-    const { cage_code } = req.params;
-    const id = cage_code.toUpperCase();
-    const { sort = 'award_date', order = 'desc', page, limit } = req.query;
-    const { page: p, limit: l, offset } = paginate(page, limit);
-
-    const ALLOWED = new Set(['award_amount', 'award_date', 'date_signed']);
-    const col = ALLOWED.has(sort) ? sort : 'award_date';
-    const dir = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-
-    const vendorCheck = await db.query(
-      `SELECT vendor_id FROM vendor_entities WHERE cage_code = $1 OR uei = $1`,
-      [id]
-    );
-    if (!vendorCheck.rows.length) {
-      return res.status(404).json({ error: { status: 404, message: `Vendor ${cage_code} not found` } });
-    }
-
-    const { vendor_id } = vendorCheck.rows[0];
-
-    const [dataResult, countResult] = await Promise.all([
-      db.query(`
-        SELECT
-          a.piid,
-          a.modification_number                               AS "modificationNumber",
-          a.award_amount                                      AS "dollarsObligated",
-          a.award_date                                        AS "awardDate",
-          a.date_signed                                       AS "dateSigned",
-          a.award_type_description                            AS "awardType",
-          a.naics_code                                        AS "naicsCode",
-          a.naics_description                                 AS "naicsDescription",
-          a.product_service_code                              AS "productServiceCode",
-          a.contracting_agency_code                           AS "agencyCode",
-          a.contracting_agency_name                           AS "agencyName",
-          a.place_of_performance_state_code                   AS "stateCode",
-          a.set_aside_code                                    AS "setAsideCode",
-          a.set_aside_name                                    AS "setAsideName",
-          a.extent_competed_code                              AS "extentCompetedCode",
-          a.extent_competed_name                              AS "extentCompetedName",
-          a.description_of_requirement                        AS "description"
-        FROM award_transactions a
-        WHERE a.vendor_id = $1
-        ORDER BY ${col} ${dir}
-        LIMIT $2 OFFSET $3
-      `, [vendor_id, l, offset]),
       db.query(
-        `SELECT COUNT(*) AS total FROM award_transactions WHERE vendor_id = $1`,
-        [vendor_id]
+        `SELECT
+           v.vendor_id AS "vendorId",
+           v.cage_code AS "cageCode",
+           v.uei,
+           v.vendor_name AS name,
+           v.city,
+           v.congressional_district AS "congressionalDistrict",
+           v.state_code AS "stateCode",
+           v.country_code AS "countryCode",
+           v.socio_economic_indicator AS "socioEconomicIndicator",
+           v.annual_revenue AS "annualRevenue",
+           v.number_of_employees AS "numberOfEmployees",
+           v.vendor_registration_date AS "registrationDate",
+           COALESCE(s.award_count, 0) AS "awardCount",
+           COALESCE(s.total_obligated_amount, 0) AS "totalObligated",
+           s.latest_fiscal_year AS "latestFiscalYear"
+         FROM vendor_entities v
+         LEFT JOIN vendor_investment_summary s ON s.vendor_id = v.vendor_id
+         ${where}
+         ORDER BY ${toSortCol(sortKey)} ${direction}, v.vendor_name ASC
+         LIMIT $${values.length + 1} OFFSET $${values.length + 2}`,
+        [...values, paging.limit, paging.offset],
+      ),
+      db.query(
+        `SELECT COUNT(*)::INT AS total
+         FROM vendor_entities v
+         ${where}`,
+        values,
       ),
     ]);
 
     res.json({
       data: dataResult.rows,
       pagination: {
-        page: p, limit: l,
-        total: parseInt(countResult.rows[0].total, 10),
-        totalPages: Math.ceil(countResult.rows[0].total / l),
+        page: paging.page,
+        limit: paging.limit,
+        total: Number(countResult.rows[0].total || 0),
+        totalPages: Math.ceil(Number(countResult.rows[0].total || 0) / paging.limit),
       },
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/id/:vendorId', async (req, res, next) => {
+  try {
+    const vendor = await findVendor(`v.vendor_id::text = $1`, [req.params.vendorId]);
+    if (!vendor) {
+      return res.status(404).json({ error: { status: 404, message: `Vendor ${req.params.vendorId} not found` } });
+    }
+
+    res.json(vendor);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/id/:vendorId/awards/summary', async (req, res, next) => {
+  try {
+    const vendor = await findVendor(`v.vendor_id::text = $1`, [req.params.vendorId]);
+    if (!vendor) {
+      return res.status(404).json({ error: { status: 404, message: `Vendor ${req.params.vendorId} not found` } });
+    }
+
+    res.json(await buildVendorAwardSummary(vendor));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/id/:vendorId/awards', async (req, res, next) => {
+  try {
+    const vendor = await findVendor(`v.vendor_id::text = $1`, [req.params.vendorId]);
+    if (!vendor) {
+      return res.status(404).json({ error: { status: 404, message: `Vendor ${req.params.vendorId} not found` } });
+    }
+
+    res.json(await listVendorAwards(vendor.vendorId, req.query));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/:cage_code/awards/summary', async (req, res, next) => {
+  try {
+    const identifier = String(req.params.cage_code).trim().toUpperCase();
+    const vendor = await findVendor(`v.cage_code = $1 OR v.uei = $1`, [identifier]);
+    if (!vendor) {
+      return res.status(404).json({ error: { status: 404, message: `Vendor ${req.params.cage_code} not found` } });
+    }
+
+    res.json(await buildVendorAwardSummary(vendor));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/:cage_code/awards', async (req, res, next) => {
+  try {
+    const identifier = String(req.params.cage_code).trim().toUpperCase();
+    const vendor = await findVendor(`v.cage_code = $1 OR v.uei = $1`, [identifier]);
+    if (!vendor) {
+      return res.status(404).json({ error: { status: 404, message: `Vendor ${req.params.cage_code} not found` } });
+    }
+
+    res.json(await listVendorAwards(vendor.vendorId, req.query));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/:cage_code', async (req, res, next) => {
+  try {
+    const identifier = String(req.params.cage_code).trim().toUpperCase();
+    const vendor = await findVendor(`v.cage_code = $1 OR v.uei = $1`, [identifier]);
+    if (!vendor) {
+      return res.status(404).json({ error: { status: 404, message: `Vendor ${req.params.cage_code} not found` } });
+    }
+
+    res.json(vendor);
+  } catch (error) {
+    next(error);
   }
 });
 

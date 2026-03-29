@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS vendor_entities (
   vendor_registration_date     DATE,
   vendor_renewal_date          DATE,
   city                         VARCHAR(200),
+  congressional_district       TEXT,
   state_code                   VARCHAR(10),
   state_name                   VARCHAR(100),
   zip_code                     VARCHAR(20),
@@ -211,7 +212,11 @@ CREATE TABLE IF NOT EXISTS award_transactions (
   funding_agency_name                  TEXT,
   funding_office_code                  TEXT,
   funding_office_name                  TEXT,
+  number_of_offers_received            INTEGER,
   place_of_performance_city            TEXT,
+  place_of_performance_congressional_district TEXT,
+  place_of_performance_county_code     TEXT,
+  place_of_performance_county_name     TEXT,
   place_of_performance_state_code      TEXT,
   place_of_performance_state_name      TEXT,
   place_of_performance_country_code    TEXT,
@@ -220,6 +225,21 @@ CREATE TABLE IF NOT EXISTS award_transactions (
   extra_attributes                     JSONB        NOT NULL DEFAULT '{}'::jsonb,
   created_at                           TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE vendor_entities
+  ADD COLUMN IF NOT EXISTS congressional_district TEXT;
+
+ALTER TABLE award_transactions
+  ADD COLUMN IF NOT EXISTS number_of_offers_received INTEGER;
+
+ALTER TABLE award_transactions
+  ADD COLUMN IF NOT EXISTS place_of_performance_congressional_district TEXT;
+
+ALTER TABLE award_transactions
+  ADD COLUMN IF NOT EXISTS place_of_performance_county_code TEXT;
+
+ALTER TABLE award_transactions
+  ADD COLUMN IF NOT EXISTS place_of_performance_county_name TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_award_transactions_vendor_date
   ON award_transactions (vendor_id, award_date DESC);

@@ -7,137 +7,176 @@ const api = axios.create({
   timeout: 30000,
 });
 
-// ---------------------------------------------------------------------------
-// Dashboard
-// ---------------------------------------------------------------------------
+function cleanParams(params = {}) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== '' && value !== null && value !== undefined)
+  );
+}
 
+function snakeToCamel(value) {
+  return value.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
+}
+
+function toCamelDeep(value) {
+  if (Array.isArray(value)) {
+    return value.map(toCamelDeep);
+  }
+
+  if (value && typeof value === 'object' && value.constructor === Object) {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => [snakeToCamel(key), toCamelDeep(nested)])
+    );
+  }
+
+  return value;
+}
+
+async function get(path, params = {}) {
+  const { data } = await api.get(path, { params: cleanParams(params) });
+  return toCamelDeep(data);
+}
+
+// Dashboard
 export async function getDashboardKPIs(params = {}) {
-  const { data } = await api.get('/dashboard/kpis', { params });
-  return data;
+  return get('/dashboard/kpis', params);
 }
 
 export async function getTopEarners(params = {}) {
-  const { data } = await api.get('/dashboard/top-earners', { params });
-  return data.data;
+  const data = await get('/dashboard/top-earners', params);
+  return data.data ?? [];
 }
 
 export async function getSpendingByState(params = {}) {
-  const { data } = await api.get('/dashboard/by-state', { params });
-  return data.data;
+  const data = await get('/dashboard/by-state', params);
+  return data.data ?? [];
 }
 
 export async function getAwardTypeBreakdown(params = {}) {
-  const { data } = await api.get('/dashboard/by-type', { params });
-  return data.data;
+  const data = await get('/dashboard/by-type', params);
+  return data.data ?? [];
 }
 
 export async function getTopNaics(params = {}) {
-  const { data } = await api.get('/dashboard/by-naics', { params });
-  return data.data;
+  const data = await get('/dashboard/by-naics', params);
+  return data.data ?? [];
 }
 
-// ---------------------------------------------------------------------------
 // Awards
-// ---------------------------------------------------------------------------
-
 export async function getAwardHeaders() {
-  const { data } = await api.get('/awards/headers');
-  return data.headers;
+  const data = await get('/awards/headers');
+  return data.headers ?? [];
 }
 
-/**
- * Fetch paginated awards with optional filters.
- * @param {object} params - { page, limit, sort, order, year, agencyCode, naicsCode, stateCode, ... }
- */
 export async function getAwards(params = {}) {
-  const { data } = await api.get('/awards', { params });
-  return data; // { data, pagination }
+  return get('/awards', params);
 }
 
-// ---------------------------------------------------------------------------
 // Vendors
-// ---------------------------------------------------------------------------
-
-/**
- * Search / list vendors.
- * @param {object} params - { search, state_code, naics_code, agency_code, set_aside_code, year, page, limit, sort, order }
- */
 export async function getVendors(params = {}) {
-  const { data } = await api.get('/vendors', { params });
-  return data; // { data, pagination }
+  return get('/vendors', params);
 }
 
-/**
- * Fetch a single vendor by CAGE code.
- */
-export async function getVendor(cageCode) {
-  const { data } = await api.get(`/vendors/${cageCode}`);
-  return data;
+export async function getVendor(identifier) {
+  return get(`/vendors/${identifier}`);
 }
 
-/**
- * Fetch awards for a specific vendor by CAGE code.
- */
-export async function getVendorAwards(cageCode, params = {}) {
-  const { data } = await api.get(`/vendors/${cageCode}/awards`, { params });
-  return data;
+export async function getVendorById(vendorId) {
+  return get(`/vendors/id/${vendorId}`);
 }
 
-/**
- * Fetch award summary (by year, agency, competition) for a vendor by CAGE code.
- */
-export async function getVendorSummary(cageCode) {
-  const { data } = await api.get(`/vendors/${cageCode}/awards/summary`);
-  return data;
+export async function getVendorAwards(identifier, params = {}) {
+  return get(`/vendors/${identifier}/awards`, params);
 }
 
-// ---------------------------------------------------------------------------
+export async function getVendorAwardsById(vendorId, params = {}) {
+  return get(`/vendors/id/${vendorId}/awards`, params);
+}
+
+export async function getVendorSummary(identifier) {
+  return get(`/vendors/${identifier}/awards/summary`);
+}
+
+export async function getVendorSummaryById(vendorId) {
+  return get(`/vendors/id/${vendorId}/awards/summary`);
+}
+
 // Upload
-// ---------------------------------------------------------------------------
-
 export async function uploadCSV(file, onProgress) {
   const formData = new FormData();
   formData.append('file', file);
+
   const { data } = await api.post('/upload', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
-    onUploadProgress: (e) => {
-      if (e.total && onProgress) onProgress(Math.round((e.loaded * 100) / e.total));
+    onUploadProgress: (event) => {
+      if (event.total && onProgress) {
+        onProgress(Math.round((event.loaded * 100) / event.total));
+      }
     },
     timeout: 10 * 60 * 1000,
   });
-  return data;
+
+  return toCamelDeep(data);
 }
 
-// ---------------------------------------------------------------------------
 // Analytics
-// ---------------------------------------------------------------------------
+export async function getAnalyticsFilters() {
+  return get('/analytics/filters');
+}
 
-/**
- * GET /api/analytics/sector-heatmap
- * @param {object} params - { year, agency_code, limit }
- */
+export async function getOpportunityHeatmap(params = {}) {
+  return get('/analytics/opportunity-heatmap', params);
+}
+
+export async function getInvestmentScores(params = {}) {
+  return get('/analytics/investment-scores', params);
+}
+
+export async function getEmergingWinners(params = {}) {
+  return get('/analytics/emerging-winners', params);
+}
+
+export async function getVendorMoat(params = {}) {
+  return get('/analytics/vendor-moat', params);
+}
+
+export async function getVendorRiskProfileById(vendorId, params = {}) {
+  return get(`/analytics/risk-profile/vendor/${vendorId}`, params);
+}
+
+export async function getRiskProfile(identifier, params = {}) {
+  return get(`/analytics/risk-profile/${identifier}`, params);
+}
+
+export async function getSoleSourceOpportunities(params = {}) {
+  return get('/analytics/sole-source-opportunities', params);
+}
+
+export async function getMarketConcentration(params = {}) {
+  return get('/analytics/market-concentration', params);
+}
+
 export async function getSectorHeatmap(params = {}) {
-  const { data } = await api.get('/analytics/sector-heatmap', { params });
-  return data;
+  return get('/analytics/sector-heatmap', params);
 }
 
-/**
- * GET /api/analytics/geographic-clustering
- * @param {object} params - { year, state_code, naics_code, limit }
- */
 export async function getGeographicClustering(params = {}) {
-  const { data } = await api.get('/analytics/geographic-clustering', { params });
-  return data;
+  return get('/analytics/geographic-clustering', params);
 }
 
-/**
- * GET /api/analytics/win-rate/:cage_code
- * @param {string} cageCode
- * @param {object} params - { year }
- */
-export async function getWinRate(cageCode, params = {}) {
-  const { data } = await api.get(`/analytics/win-rate/${cageCode}`, { params });
-  return data;
+export async function getNaicsTrends(params = {}) {
+  return get('/analytics/naics-trends', params);
+}
+
+export async function getRepeatWinners(params = {}) {
+  return get('/analytics/repeat-winners', params);
+}
+
+export async function getRevenueStabilityById(vendorId, params = {}) {
+  return get(`/analytics/revenue-stability/vendor/${vendorId}`, params);
+}
+
+export async function getWinRate(identifier, params = {}) {
+  return get(`/analytics/win-rate/${identifier}`, params);
 }
 
 export default api;

@@ -27,6 +27,7 @@ const COLUMNS = [
   { key: 'name',             label: 'Vendor Name',     sortable: true,  type: 'string',   width: 'min-w-[220px]' },
   { key: 'cageCode',         label: 'CAGE',            sortable: false, type: 'string',   width: 'w-[100px]' },
   { key: 'uei',              label: 'UEI',             sortable: true,  type: 'string',   width: 'w-[130px]' },
+  { key: 'city',             label: 'City',            sortable: false, type: 'string',   width: 'w-[140px]' },
   { key: 'totalObligated',   label: 'Total Obligated', sortable: true,  type: 'currency', width: 'w-[160px]', align: 'right' },
   { key: 'awardCount',       label: 'Award Count',     sortable: true,  type: 'number',   width: 'w-[120px]', align: 'right' },
   { key: 'stateCode',        label: 'State',           sortable: false, type: 'badge',    width: 'w-[80px]',  align: 'center' },
@@ -69,7 +70,7 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
   // Determine visible columns: always show COLUMNS, but also render any
   // extra keys found in the first row that aren't in our known set.
   const extraKeys = data.length
-    ? Object.keys(data[0]).filter((k) => !COLUMNS.find((c) => c.key === k))
+    ? Object.keys(data[0]).filter((k) => k !== 'vendorId' && !COLUMNS.find((c) => c.key === k))
     : [];
 
   const allColumns = [
@@ -154,7 +155,7 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
           {/* Data rows */}
           {!loading && !error && data.map((row, idx) => (
             <TableRow
-              key={row.uei ?? idx}
+              key={row.vendorId ?? row.uei ?? idx}
               className={cn(onRowClick && 'cursor-pointer hover:bg-muted/50')}
               onClick={() => onRowClick?.(row)}
             >

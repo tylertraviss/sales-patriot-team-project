@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'vendors',   label: 'Vendors'   },
   { id: 'graph',     label: 'Sector Graph' },
-  { id: 'analytics', label: 'Analytics' },
+  { id: 'analytics', label: 'SalesPatriot Opportunities' },
 ];
 
 export default function App() {
@@ -42,7 +42,7 @@ export default function App() {
 
       {/* Page content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activePage === 'dashboard' && <Dashboard />}
+        {activePage === 'dashboard' && <Dashboard onOpenOpportunities={() => setActivePage('analytics')} />}
         {activePage === 'vendors'   && <Vendors />}
         {activePage === 'graph'     && <Graph />}
         {activePage === 'analytics' && <Analytics />}

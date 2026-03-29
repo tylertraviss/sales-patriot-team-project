@@ -14,7 +14,13 @@ import VendorSpendChart from './VendorSpendChart';
 import VendorAgencyChart from './VendorAgencyChart';
 import VendorCompetitionChart from './VendorCompetitionChart';
 import VendorAwardsTable from './VendorAwardsTable';
-import { getVendor, getVendorSummary, getWinRate } from '@/services/vendors';
+import {
+  getVendor,
+  getVendorById,
+  getVendorSummary,
+  getVendorSummaryById,
+  getWinRate,
+} from '@/services/vendors';
 
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 
@@ -37,7 +43,7 @@ function StatCard({ label, value, sub }) {
   );
 }
 
-export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenChange }) {
+export default function VendorDetailDrawer({ cageCode, vendorId, vendorName, open, onOpenChange }) {
   const [vendor, setVendor] = useState(null);
   const [summary, setSummary] = useState(null);
   const [winRate, setWinRate] = useState(null);
@@ -45,17 +51,21 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!open || !cageCode) return;
+    if (!open || (!cageCode && !vendorId)) return;
     setVendor(null);
     setSummary(null);
     setWinRate(null);
     setError(null);
     setLoading(true);
 
+    const identity = vendorId || cageCode;
+    const vendorLoader = vendorId ? getVendorById : getVendor;
+    const summaryLoader = vendorId ? getVendorSummaryById : getVendorSummary;
+
     Promise.allSettled([
-      getVendor(cageCode),
-      getVendorSummary(cageCode),
-      getWinRate(cageCode),
+      vendorLoader(identity),
+      summaryLoader(identity),
+      cageCode ? getWinRate(cageCode) : Promise.resolve(null),
     ]).then(([vRes, sRes, wrRes]) => {
       if (vRes.status  === 'fulfilled') setVendor(vRes.value);
       if (sRes.status  === 'fulfilled') setSummary(sRes.value);
@@ -65,7 +75,7 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
       }
       setLoading(false);
     });
-  }, [open, cageCode]);
+  }, [open, cageCode, vendorId]);
 
   const spendByYear   = summary?.byYear         ?? [];
   const byAgency      = summary?.byAgency        ?? [];
@@ -85,7 +95,7 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
           </SheetTitle>
           <SheetDescription className="flex items-center gap-2 flex-wrap">
             {vendor?.uei && <Badge variant="outline" className="font-mono text-xs">UEI: {vendor.uei}</Badge>}
-            {cageCode && <Badge variant="outline" className="font-mono text-xs">CAGE: {cageCode}</Badge>}
+            {vendor?.cageCode && <Badge variant="outline" className="font-mono text-xs">CAGE: {vendor.cageCode}</Badge>}
             {vendor?.stateCode && <span className="text-xs">{vendor.stateCode}</span>}
           </SheetDescription>
         </SheetHeader>
@@ -157,7 +167,7 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
             {/* Individual awards */}
             <Separator />
             <Section title="Contract Awards">
-              <VendorAwardsTable cageCode={cageCode} />
+              <VendorAwardsTable cageCode={cageCode} vendorId={vendorId ?? vendor?.vendorId} />
             </Section>
           </>
         )}
