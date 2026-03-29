@@ -123,7 +123,7 @@ function SetAsideTimeline({ history, graduated }) {
 export default function VendorProfile({ vendor, winRate }) {
   if (!vendor) return null;
 
-  const location = [vendor.stateCode, vendor.countryCode]
+  const location = [vendor.city, vendor.stateCode, vendor.countryCode]
     .filter(Boolean)
     .join(', ');
 
@@ -133,6 +133,9 @@ export default function VendorProfile({ vendor, winRate }) {
       <div className="space-y-3">
         <Stat icon={Building2} label="UEI / CAGE" value={[vendor.uei, vendor.cageCode].filter(Boolean).join(' · ')} />
         {location && <Stat icon={MapPin} label="Location" value={location} />}
+        {vendor.congressionalDistrict && (
+          <Stat icon={MapPin} label="Congressional District" value={vendor.congressionalDistrict} />
+        )}
         {vendor.numberOfEmployees && (
           <Stat icon={Users} label="Employees" value={fmtNum.format(vendor.numberOfEmployees)} />
         )}
