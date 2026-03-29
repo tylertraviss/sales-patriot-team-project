@@ -6,6 +6,7 @@ import SpendingByState from '../components/SpendingByState';
 import TopNaics from '../components/TopNaics';
 import CompetedOverTime from '../components/CompetedOverTime';
 import AwardTypeBreakdown from '../components/AwardTypeBreakdown';
+import CompanyGraph from '../components/CompanyGraph';
 
 export default function Dashboard() {
   const [selectedCompany, setSelectedCompany] = useState(null);
@@ -46,6 +47,9 @@ export default function Dashboard() {
         <TopNaics />
         <CompetedOverTime />
       </div>
+
+      {/* Company relationship graph */}
+      <CompanyGraph />
 
       {/* Awards table */}
       <AwardsTable cageCode={selectedCompany?.cage_code ?? null} />
