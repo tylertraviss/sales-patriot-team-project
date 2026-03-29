@@ -31,10 +31,10 @@ router.get('/', async (req, res, next) => {
     const [dataResult, countResult] = await Promise.all([
       db.query(`
         SELECT
-          contracting_agency_code AS code,
-          contracting_agency_name AS name,
-          COUNT(*)                AS award_count,
-          SUM(award_amount)       AS total_obligated
+          contracting_agency_code   AS "code",
+          contracting_agency_name   AS "name",
+          COUNT(*)                  AS "awardCount",
+          SUM(award_amount)         AS "totalObligated"
         FROM award_transactions
         ${where}
         GROUP BY contracting_agency_code, contracting_agency_name
@@ -76,19 +76,19 @@ router.get('/:code/awards', async (req, res, next) => {
       db.query(`
         SELECT
           a.piid,
-          a.modification_number,
-          a.award_amount           AS dollars_obligated,
-          a.award_date,
-          a.date_signed,
-          a.award_type_description AS award_type,
-          a.naics_code,
-          a.naics_description,
-          a.place_of_performance_state_code AS state_code,
-          a.set_aside_code,
-          a.extent_competed_code,
-          a.description_of_requirement,
-          v.cage_code              AS vendor_cage,
-          v.vendor_name            AS vendor_name
+          a.modification_number                             AS "modificationNumber",
+          a.award_amount                                    AS "dollarsObligated",
+          a.award_date                                      AS "awardDate",
+          a.date_signed                                     AS "dateSigned",
+          a.award_type_description                          AS "awardType",
+          a.naics_code                                      AS "naicsCode",
+          a.naics_description                               AS "naicsDescription",
+          a.place_of_performance_state_code                 AS "stateCode",
+          a.set_aside_code                                  AS "setAsideCode",
+          a.extent_competed_code                            AS "extentCompetedCode",
+          a.description_of_requirement                      AS "description",
+          v.cage_code                                       AS "vendorCage",
+          v.vendor_name                                     AS "vendorName"
         FROM award_transactions a
         JOIN vendor_entities v ON v.vendor_id = a.vendor_id
         WHERE a.contracting_agency_code = $1
@@ -128,27 +128,25 @@ router.get('/:code/vendors', async (req, res, next) => {
     const [dataResult, countResult] = await Promise.all([
       db.query(`
         SELECT
-          v.cage_code,
+          v.cage_code                                       AS "cageCode",
           v.uei,
-          v.vendor_name             AS name,
-          v.state_code,
-          v.socio_economic_indicator,
-          COUNT(*)                  AS award_count,
-          SUM(a.award_amount)       AS total_obligated
+          v.vendor_name                                     AS "name",
+          v.state_code                                      AS "stateCode",
+          v.socio_economic_indicator                        AS "socioEconomicIndicator",
+          COUNT(*)                                          AS "awardCount",
+          SUM(a.award_amount)                               AS "totalObligated"
         FROM award_transactions a
         JOIN vendor_entities v ON v.vendor_id = a.vendor_id
         WHERE a.contracting_agency_code = $1
-          AND v.cage_code IS NOT NULL AND BTRIM(v.cage_code) <> ''
         GROUP BY v.cage_code, v.uei, v.vendor_name, v.state_code, v.socio_economic_indicator
         ORDER BY ${col} ${dir}
         LIMIT $2 OFFSET $3
       `, [code, l, offset]),
       db.query(`
-        SELECT COUNT(DISTINCT v.cage_code) AS total
+        SELECT COUNT(DISTINCT v.vendor_id) AS total
         FROM award_transactions a
         JOIN vendor_entities v ON v.vendor_id = a.vendor_id
         WHERE a.contracting_agency_code = $1
-          AND v.cage_code IS NOT NULL AND BTRIM(v.cage_code) <> ''
       `, [code]),
     ]);
 

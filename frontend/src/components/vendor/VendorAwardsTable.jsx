@@ -18,30 +18,29 @@ function competitionVariant(val) {
   return 'secondary';
 }
 
-// Columns — keys match backend snake_case field names directly
 const cols = [
-  { key: 'piid',                  label: 'Contract ID',  width: 'w-[140px]' },
-  { key: 'dollars_obligated',     label: 'Obligated',    width: 'w-[120px]', align: 'right' },
-  { key: 'date_signed',           label: 'Date Signed',  width: 'w-[110px]' },
-  { key: 'award_type',            label: 'Type',         width: 'w-[120px]' },
-  { key: 'agency_code',           label: 'Agency',       width: 'w-[90px]' },
-  { key: 'extent_competed_name',  label: 'Competition',  width: '' },
-  { key: 'set_aside_name',        label: 'Set-Aside',    width: 'w-[100px]' },
+  { key: 'piid',              label: 'Contract ID',  width: 'w-[140px]' },
+  { key: 'dollarsObligated',  label: 'Obligated',    width: 'w-[120px]', align: 'right' },
+  { key: 'dateSigned',        label: 'Date Signed',  width: 'w-[110px]' },
+  { key: 'awardType',         label: 'Type',         width: 'w-[120px]' },
+  { key: 'agencyCode',        label: 'Agency',       width: 'w-[90px]' },
+  { key: 'extentCompetedName',label: 'Competition',  width: '' },
+  { key: 'setAsideName',      label: 'Set-Aside',    width: 'w-[100px]' },
 ];
 
 function cellValue(row, key) {
   const v = row[key];
   if (v === null || v === undefined || v === '') return <span className="text-muted-foreground">—</span>;
-  if (key === 'dollars_obligated') return <span className="tabular-nums">{fmt.format(Number(v))}</span>;
-  if (key === 'date_signed') return String(v).slice(0, 10);
-  if (key === 'extent_competed_name') {
+  if (key === 'dollarsObligated') return <span className="tabular-nums">{fmt.format(Number(v))}</span>;
+  if (key === 'dateSigned') return String(v).slice(0, 10);
+  if (key === 'extentCompetedName') {
     const label = String(v)
       .replace('FULL AND OPEN COMPETITION AFTER EXCLUSION OF SOURCES', 'Full & Open (Excl.)')
       .replace('FULL AND OPEN COMPETITION', 'Full & Open')
       .replace('NOT AVAILABLE FOR COMPETITION', 'Not Competed');
     return <Badge variant={competitionVariant(String(v))} className="text-xs whitespace-nowrap">{label}</Badge>;
   }
-  if (key === 'set_aside_name' && v !== 'NONE' && v !== 'N/A') {
+  if (key === 'setAsideName' && v !== 'NONE' && v !== 'N/A') {
     return <Badge variant="secondary" className="text-xs">{v}</Badge>;
   }
   return <span className="truncate max-w-[160px] block" title={String(v)}>{String(v)}</span>;
@@ -49,18 +48,23 @@ function cellValue(row, key) {
 
 export default function VendorAwardsTable({ cageCode }) {
   const [awards, setAwards] = useState([]);
-  const [meta, setMeta]     = useState(null);
-  const [page, setPage]     = useState(1);
-  const [limit]             = useState(10);
+  const [meta, setMeta] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
   const [loading, setLoading] = useState(false);
-  const [error, setError]   = useState(null);
+  const [error, setError] = useState(null);
 
-  const load = useCallback(async () => {
+  const fetchAwards = useCallback(async () => {
     if (!cageCode) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await getVendorAwards(cageCode, { page, limit, sort: 'award_amount', order: 'desc' });
+      const res = await getVendorAwards(cageCode, {
+        page,
+        limit,
+        sort: 'award_amount',
+        order: 'desc',
+      });
       setAwards(res.data ?? []);
       setMeta(res.pagination ?? null);
     } catch (e) {
@@ -70,7 +74,7 @@ export default function VendorAwardsTable({ cageCode }) {
     }
   }, [cageCode, page, limit]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { fetchAwards(); }, [fetchAwards]);
 
   return (
     <div className="space-y-2">
@@ -89,7 +93,9 @@ export default function VendorAwardsTable({ cageCode }) {
             {loading && Array.from({ length: limit }).map((_, i) => (
               <TableRow key={i} className="animate-pulse">
                 {cols.map((c) => (
-                  <TableCell key={c.key}><div className="h-3 rounded bg-muted w-3/4" /></TableCell>
+                  <TableCell key={c.key}>
+                    <div className="h-3 rounded bg-muted w-3/4" />
+                  </TableCell>
                 ))}
               </TableRow>
             ))}
@@ -120,6 +126,7 @@ export default function VendorAwardsTable({ cageCode }) {
         </Table>
       </div>
 
+      {/* Mini pagination */}
       {meta && meta.totalPages > 1 && (
         <div className="flex items-center justify-between px-1">
           <p className="text-xs text-muted-foreground">

@@ -5,6 +5,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -26,11 +27,12 @@ function Section({ title, children }) {
   );
 }
 
-function StatCard({ label, value }) {
+function StatCard({ label, value, sub }) {
   return (
     <div className="rounded-lg border bg-muted/30 px-4 py-3 space-y-0.5">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-lg font-bold tabular-nums leading-tight">{value}</p>
+      {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </div>
   );
 }
@@ -38,107 +40,47 @@ function StatCard({ label, value }) {
 export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenChange }) {
   const [vendor, setVendor] = useState(null);
   const [summary, setSummary] = useState(null);
-  const [resolvedCageCode, setResolvedCageCode] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!open || (!cageCode && !vendorName)) return;
+    if (!open || !cageCode) return;
     setVendor(null);
     setSummary(null);
-    setResolvedCageCode(null);
     setError(null);
     setLoading(true);
 
-    async function resolveCageCode(candidate, name) {
-      // 1. Try the candidate directly
-      if (candidate) {
-        try {
-          const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-          const res  = await fetch(`${BASE}/vendors/${candidate}`);
-          if (res.ok) return candidate; // it's a valid cage_code
-        } catch { /* fall through */ }
-      }
-      // 2. Fall back to name search
-      if (name) {
-        try {
-          const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-          const res  = await fetch(`${BASE}/vendors?search=${encodeURIComponent(name)}&limit=5`);
-          if (res.ok) {
-            const json  = await res.json();
-            const match = (json.data ?? []).find(
-              (v) => v.name?.toUpperCase() === name.toUpperCase()
-            ) ?? json.data?.[0];
-            if (match?.cage_code) return match.cage_code;
-          }
-        } catch { /* fall through */ }
-      }
-      return null;
-    }
-
-    async function load() {
-      const resolvedCage = await resolveCageCode(cageCode, vendorName);
-
-      if (!resolvedCage) {
-        setLoading(false);
-        return;
-      }
-
-      setResolvedCageCode(resolvedCage);
-      const [vRes, sRes] = await Promise.allSettled([
-        getVendor(resolvedCage),
-        getVendorSummary(resolvedCage),
-      ]);
+    Promise.allSettled([getVendor(cageCode), getVendorSummary(cageCode)]).then(([vRes, sRes]) => {
       if (vRes.status === 'fulfilled') setVendor(vRes.value);
       if (sRes.status === 'fulfilled') setSummary(sRes.value);
       if (vRes.status === 'rejected' && sRes.status === 'rejected') {
-        setError('No profile found for this vendor.');
+        setError('Failed to load vendor data.');
       }
       setLoading(false);
-    }
+    });
+  }, [open, cageCode]);
 
-    load();
-  }, [open, cageCode, vendorName]);
+  const spendByYear   = summary?.byYear         ?? [];
+  const byAgency      = summary?.byAgency        ?? [];
+  const byCompetition = summary?.byCompetition   ?? [];
 
-  function extract(key, ...fallbacks) {
-    if (!summary) return [];
-    for (const k of [key, ...fallbacks]) {
-      if (Array.isArray(summary[k]) && summary[k].length) return summary[k];
-    }
-    return [];
-  }
-
-  const spendByYear   = extract('byYear', 'spendByYear', 'yearlySpend', 'byFiscalYear');
-  const byAgency      = extract('byAgency', 'agencyBreakdown', 'agencies');
-  const byCompetition = extract('byCompetition', 'competitionBreakdown', 'extentCompeted');
-
-  // Backend returns snake_case fields — support both
-  const totalObligated = vendor?.total_obligated ?? vendor?.totalObligated ?? summary?.totalObligated ?? null;
-  const awardCount     = vendor?.award_count ?? vendor?.awardCount ?? summary?.awardCount ?? null;
-
-  // Display name — backend returns `name`, fallback to prop
-  const displayName = vendorName ?? vendor?.name ?? vendor?.vendor_name ?? cageCode;
+  const totalObligated = vendor?.totalObligated ?? summary?.totalObligated ?? null;
+  const awardCount     = vendor?.awardCount     ?? summary?.awardCount     ?? null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto flex flex-col gap-6 pt-10">
 
-        {/* Header — use a div instead of SheetDescription to avoid <p> nesting warning */}
+        {/* Header */}
         <SheetHeader className="space-y-1 pr-6">
-          <SheetTitle className="text-xl leading-tight">{displayName}</SheetTitle>
-          <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
-            {vendor?.uei && (
-              <Badge variant="outline" className="font-mono text-xs">{vendor.uei}</Badge>
-            )}
-            {(vendor?.cage_code ?? vendor?.cageCode) && (
-              <Badge variant="outline" className="font-mono text-xs">
-                CAGE: {vendor.cage_code ?? vendor.cageCode}
-              </Badge>
-            )}
-            {(vendor?.state_code ?? vendor?.stateCode) && (
-              <span className="text-xs">{vendor.state_code ?? vendor.stateCode}</span>
-            )}
-          </div>
+          <SheetTitle className="text-xl leading-tight">
+            {vendorName ?? vendor?.name ?? cageCode}
+          </SheetTitle>
+          <SheetDescription className="flex items-center gap-2 flex-wrap">
+            {vendor?.uei && <Badge variant="outline" className="font-mono text-xs">UEI: {vendor.uei}</Badge>}
+            {cageCode && <Badge variant="outline" className="font-mono text-xs">CAGE: {cageCode}</Badge>}
+            {vendor?.stateCode && <span className="text-xs">{vendor.stateCode}</span>}
+          </SheetDescription>
         </SheetHeader>
 
         {loading && (
@@ -206,14 +148,10 @@ export default function VendorDetailDrawer({ cageCode, vendorName, open, onOpenC
             )}
 
             {/* Individual awards */}
-            {resolvedCageCode && (
-              <>
-                <Separator />
-                <Section title="Contract Awards">
-                  <VendorAwardsTable cageCode={resolvedCageCode} />
-                </Section>
-              </>
-            )}
+            <Separator />
+            <Section title="Contract Awards">
+              <VendorAwardsTable cageCode={cageCode} />
+            </Section>
           </>
         )}
       </SheetContent>
