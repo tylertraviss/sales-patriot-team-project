@@ -11,6 +11,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
+// Convert camelCase / snake_case keys to readable Title Case labels
+// e.g. "totalObligated" → "Total Obligated", "naics_code" → "Naics Code"
+function keyToLabel(key) {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 // Known columns with metadata. The table is built generically so unknown
 // fields from the API will still render — these just provide better labels
 // and formatting hints for the fields we expect.
@@ -65,7 +74,7 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
 
   const allColumns = [
     ...COLUMNS,
-    ...extraKeys.map((k) => ({ key: k, label: k, sortable: false, type: 'string', width: '' })),
+    ...extraKeys.map((k) => ({ key: k, label: keyToLabel(k), sortable: false, type: 'string', width: '' })),
   ];
 
   // Detect which known columns are actually present in the data

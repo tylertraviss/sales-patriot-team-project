@@ -9,7 +9,7 @@
  */
 import mockData from './mockData.json';
 
-const { vendors, vendorDetails, vendorSummaries, vendorAwards } = mockData;
+const { vendors, vendorDetails, vendorSummaries, vendorAwards, naicsGraph } = mockData;
 
 // Known agency code → full name mapping (from real CSV data)
 const AGENCY_NAMES = {
@@ -77,6 +77,25 @@ export async function mockGetVendor(uei) {
   if (!v) throw new Error(`Vendor ${uei} not found`);
   return v;
 }
+
+// ─── NAICS competitor network graph ──────────────────────────────────────────
+// Returns { nodes, links, sectors } — optionally filtered to one NAICS sector.
+export async function mockGetNaicsGraph({ naicsCode } = {}) {
+  await delay(120);
+  if (!naicsCode) return naicsGraph;
+  const sectorId = `naics_${naicsCode}`;
+  const linkedVendorIds = new Set(
+    naicsGraph.links
+      .filter((l) => l.source === sectorId || l.target === sectorId)
+      .map((l) => (l.source === sectorId ? l.target : l.source))
+  );
+  return {
+    nodes: naicsGraph.nodes.filter((n) => n.id === sectorId || linkedVendorIds.has(n.id)),
+    links: naicsGraph.links.filter((l) => l.source === sectorId || l.target === sectorId),
+    sectors: naicsGraph.sectors,
+  };
+}
+
 
 // ─── GET /api/vendors/:uei/awards/summary ────────────────────────────────────
 export async function mockGetVendorSummary(uei) {

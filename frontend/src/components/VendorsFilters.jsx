@@ -49,19 +49,24 @@ export default function VendorsFilters({ filters, onFilterChange, onReset }) {
           />
         </div>
 
-        {/* Year */}
-        <div className="w-full sm:w-36">
+        {/* Fiscal Year */}
+        <div className="w-full sm:w-44 flex flex-col gap-1">
+          <label className="text-xs font-medium text-muted-foreground px-0.5">
+            Fiscal Year
+          </label>
           <Select
             value={filters.year}
             onValueChange={(val) => onFilterChange('year', val)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Year" />
+              <SelectValue placeholder="Select fiscal year">
+                {filters.year ? `FY ${filters.year}` : 'Select fiscal year'}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {YEARS.map((y) => (
                 <SelectItem key={y} value={y}>
-                  {y}
+                  FY {y}
                 </SelectItem>
               ))}
             </SelectContent>
