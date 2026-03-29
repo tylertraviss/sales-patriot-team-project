@@ -5,7 +5,7 @@ import {
 } from './mockApi';
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
-const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'false';
 
 async function apiFetch(path, params = {}) {
   const url = new URL(`${BASE_URL}${path}`);
