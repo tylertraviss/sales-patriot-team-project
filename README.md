@@ -17,20 +17,69 @@ CAGE code is company name
 
 We want to know everything about this years rewards. what company should i invest in. top 3 cage codes i should invest in
 
-GET /api/vendors?sort=totalObligated&order=desc&year=2010
+GET /api/vendors
+  ?page=1&limit=25
+  ?sort=totalObligated&order=desc
+  ?year=2010
+  ?naicsCode=517110
+  ?stateCode=VA
+  ?agencyCode=9700
+  ?setAsideType=SBA
+  ?search=indyne          ← name search
+
 GET /api/vendors/:uei
 GET /api/vendors/:uei/awards
-GET /api/vendors/:uei/awards?year=2010
-GET /api/vendors/:uei/awards/summary       ← sub-resource, aggregate view
+  ?page=1&limit=25
+  ?sort=dollarsObligated&order=desc
+  ?year=2010
+  ?agencyCode=9700
+  ?awardType=DEFINITIVE+CONTRACT
 
-GET /api/awards?year=2010&sort=dollarsObligated
-GET /api/awards?naicsCode=517110
-GET /api/awards?agencyCode=9700&extentCompeted=D
+GET /api/vendors/:uei/awards/summary   ← aggregates only, no pagination needed
+
+GET /api/awards
+  ?page=1&limit=25
+  ?sort=dollarsObligated&order=desc
+  ?year=2010
+  ?agencyCode=9700
+  ?naicsCode=517110
+  ?stateCode=CA
+  ?awardType=DEFINITIVE+CONTRACT
+  ?extentCompeted=D
+  ?search=communications   ← searches descriptionOfRequirement
 
 GET /api/agencies
+  ?page=1&limit=25
+  ?sort=name&order=asc
+
 GET /api/agencies/:code/awards
+  ?page=1&limit=25
+  ?sort=dollarsObligated&order=desc
+  ?year=2010
+
 GET /api/agencies/:code/vendors
+  ?page=1&limit=25
+  ?sort=totalObligated&order=desc
 
 GET /api/naics
+  ?page=1&limit=25
+  ?sort=totalObligated&order=desc
+
 GET /api/naics/:code/awards
+  ?page=1&limit=25
+  ?year=2010
+
 GET /api/naics/:code/vendors
+  ?page=1&limit=25
+Pagination response envelope — every paginated endpoint returns:
+
+
+{
+  "data": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 25,
+    "total": 84201,
+    "totalPages": 3369
+  }
+}
