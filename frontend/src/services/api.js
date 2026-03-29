@@ -108,4 +108,36 @@ export async function uploadCSV(file, onProgress) {
   return data;
 }
 
+// ---------------------------------------------------------------------------
+// Analytics
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /api/analytics/sector-heatmap
+ * @param {object} params - { year, agency_code, limit }
+ */
+export async function getSectorHeatmap(params = {}) {
+  const { data } = await api.get('/analytics/sector-heatmap', { params });
+  return data;
+}
+
+/**
+ * GET /api/analytics/geographic-clustering
+ * @param {object} params - { year, state_code, naics_code, limit }
+ */
+export async function getGeographicClustering(params = {}) {
+  const { data } = await api.get('/analytics/geographic-clustering', { params });
+  return data;
+}
+
+/**
+ * GET /api/analytics/win-rate/:cage_code
+ * @param {string} cageCode
+ * @param {object} params - { year }
+ */
+export async function getWinRate(cageCode, params = {}) {
+  const { data } = await api.get(`/analytics/win-rate/${cageCode}`, { params });
+  return data;
+}
+
 export default api;

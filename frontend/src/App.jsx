@@ -2,12 +2,14 @@ import { useState } from 'react';
 import Dashboard from './pages/Dashboard';
 import Vendors from './pages/Vendors';
 import Graph from './pages/Graph';
+import Analytics from './pages/Analytics';
 import logo from './assets/salespatriot_logo.jpeg';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'vendors',   label: 'Vendors'   },
   { id: 'graph',     label: 'Sector Graph' },
+  { id: 'analytics', label: 'Analytics' },
 ];
 
 export default function App() {
@@ -43,6 +45,7 @@ export default function App() {
         {activePage === 'dashboard' && <Dashboard />}
         {activePage === 'vendors'   && <Vendors />}
         {activePage === 'graph'     && <Graph />}
+        {activePage === 'analytics' && <Analytics />}
       </main>
     </div>
   );

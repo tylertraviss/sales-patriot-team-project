@@ -24,13 +24,13 @@ function keyToLabel(key) {
 // fields from the API will still render — these just provide better labels
 // and formatting hints for the fields we expect.
 const COLUMNS = [
-  { key: 'name',            label: 'Vendor Name',        sortable: true,  type: 'string',   width: 'min-w-[220px]' },
-  { key: 'cage_code',       label: 'CAGE',               sortable: false, type: 'string',   width: 'w-[100px]' },
-  { key: 'uei',             label: 'UEI',                sortable: true,  type: 'string',   width: 'w-[130px]' },
-  { key: 'total_obligated', label: 'Total Obligated',    sortable: true,  type: 'currency', width: 'w-[160px]', align: 'right' },
-  { key: 'award_count',     label: 'Award Count',        sortable: true,  type: 'number',   width: 'w-[120px]', align: 'right' },
-  { key: 'state_code',      label: 'State',              sortable: false, type: 'badge',    width: 'w-[80px]',  align: 'center' },
-  { key: 'country_code',    label: 'Country',            sortable: false, type: 'string',   width: 'w-[100px]' },
+  { key: 'name',             label: 'Vendor Name',     sortable: true,  type: 'string',   width: 'min-w-[220px]' },
+  { key: 'cageCode',         label: 'CAGE',            sortable: false, type: 'string',   width: 'w-[100px]' },
+  { key: 'uei',              label: 'UEI',             sortable: true,  type: 'string',   width: 'w-[130px]' },
+  { key: 'totalObligated',   label: 'Total Obligated', sortable: true,  type: 'currency', width: 'w-[160px]', align: 'right' },
+  { key: 'awardCount',       label: 'Award Count',     sortable: true,  type: 'number',   width: 'w-[120px]', align: 'right' },
+  { key: 'stateCode',        label: 'State',           sortable: false, type: 'badge',    width: 'w-[80px]',  align: 'center' },
+  { key: 'countryCode',      label: 'Country',         sortable: false, type: 'string',   width: 'w-[100px]' },
 ];
 
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -155,6 +155,8 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
           {!loading && !error && data.map((row, idx) => (
             <TableRow
               key={row.uei ?? idx}
+              className={cn(onRowClick && 'cursor-pointer hover:bg-muted/50')}
+              onClick={() => onRowClick?.(row)}
             >
               {displayColumns.map((col) => (
                 <TableCell
