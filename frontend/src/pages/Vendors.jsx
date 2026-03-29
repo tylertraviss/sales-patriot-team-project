@@ -7,7 +7,6 @@ import VendorDetailDrawer from '@/components/vendor/VendorDetailDrawer';
 import { mockGetVendors } from '@/services/mockApi';
 import { cn } from '@/lib/utils';
 
-// Lazy-load the globe so Three.js (~2MB) only downloads when the user switches to globe view
 const VendorGlobe = lazy(() => import('@/components/VendorGlobe'));
 
 const DEFAULT_FILTERS = {
@@ -19,17 +18,16 @@ const DEFAULT_FILTERS = {
   setAsideType: '',
 };
 
-const DEFAULT_SORT = { sort: 'vendor_name', order: 'asc' };
+const DEFAULT_SORT = { sort: 'total_obligated', order: 'desc' };
 const DEFAULT_PAGE = { page: 1, limit: 25 };
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 
-// Fetch ALL vendors (no pagination) for the globe — we need every pin
 const GLOBE_LIMIT = 500;
 
 export default function Vendors() {
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'globe'
+  const [viewMode, setViewMode] = useState('table');
 
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [sort, setSort] = useState(DEFAULT_SORT);
@@ -39,12 +37,11 @@ export default function Vendors() {
   const debounceRef = useRef(null);
 
   const [data, setData] = useState([]);
-  const [allVendors, setAllVendors] = useState([]); // for globe — all vendors, unfiltered
+  const [allVendors, setAllVendors] = useState([]);
   const [paginationMeta, setPaginationMeta] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Drawer state
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -58,7 +55,6 @@ export default function Vendors() {
     return () => clearTimeout(debounceRef.current);
   }, [filters.search]);
 
-  // Fetch paginated table data
   const fetchVendors = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -83,9 +79,12 @@ export default function Vendors() {
         params.set('limit', pagination.limit);
         params.set('sort', sort.sort);
         params.set('order', sort.order);
-        // Backend accepts: search, state_code (other filters not yet supported)
-        if (debouncedSearch) params.set('search', debouncedSearch);
-        if (filters.stateCode) params.set('state_code', filters.stateCode);
+        if (filters.year)         params.set('year', filters.year);
+        if (debouncedSearch)      params.set('search', debouncedSearch);
+        if (filters.stateCode)    params.set('state_code', filters.stateCode);
+        if (filters.naicsCode)    params.set('naics_code', filters.naicsCode);
+        if (filters.agencyCode)   params.set('agency_code', filters.agencyCode);
+        if (filters.setAsideType) params.set('set_aside_code', filters.setAsideType);
         const res = await fetch(`${BASE_URL}/vendors?${params.toString()}`);
         if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`);
         json = await res.json();
@@ -109,13 +108,13 @@ export default function Vendors() {
       try {
         const json = USE_MOCK
           ? await mockGetVendors({ page: 1, limit: GLOBE_LIMIT, sort: 'totalObligated', order: 'desc' })
-          : await fetch(`${BASE_URL}/vendors?page=1&limit=${GLOBE_LIMIT}&sort=vendor_name&order=asc`)
+          : await fetch(`${BASE_URL}/vendors?page=1&limit=${GLOBE_LIMIT}&sort=total_obligated&order=desc`)
               .then((r) => r.json());
         setAllVendors(json.data ?? []);
       } catch { /* silent — globe just shows fewer pins */ }
     }
     loadAll();
-  }, []); // only on mount
+  }, []);
 
   function handleFilterChange(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -160,7 +159,6 @@ export default function Vendors() {
           </p>
         </div>
 
-        {/* Segmented toggle */}
         <div className="flex items-center rounded-lg border bg-muted p-1 gap-1 shrink-0">
           <button
             onClick={() => setViewMode('table')}
@@ -189,7 +187,7 @@ export default function Vendors() {
         </div>
       </div>
 
-      {/* ── TABLE VIEW ── */}
+      {/* TABLE VIEW */}
       {viewMode === 'table' && (
         <>
           <VendorsFilters
@@ -218,7 +216,7 @@ export default function Vendors() {
         </>
       )}
 
-      {/* ── GLOBE VIEW ── */}
+      {/* GLOBE VIEW */}
       {viewMode === 'globe' && (
         <Suspense fallback={
           <div className="flex items-center justify-center h-[480px] rounded-xl bg-[#080d1a]">
@@ -234,8 +232,8 @@ export default function Vendors() {
 
       {/* Vendor detail drawer — shared between both views */}
       <VendorDetailDrawer
-        cageCode={selectedVendor?.cage_code}
-        vendorName={selectedVendor?.vendor_name ?? selectedVendor?.name}
+        cageCode={selectedVendor?.cageCode}
+        vendorName={selectedVendor?.name}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
       />

@@ -5,7 +5,7 @@
 - **Backend** — server, API, data upload
 - **Frontend** — data display, file upload UI
 
-The backend sends column headers to the frontend so the frontend can render tables dynamically without hardcoded field names. CAGE code is the primary company identifier.
+The backend sends column headers to the frontend so the frontend can render tables dynamically without hardcoded field names. **CAGE code is the primary company identifier.** UEI is a secondary attribute.
 
 **Core question this app answers:** What companies should I invest in? Surface the top CAGE codes by award volume for a given year.
 
@@ -59,61 +59,52 @@ cd ../frontend && npm run dev
 | Page | Route | Description |
 |---|---|---|
 | Dashboard | `/` | Overview charts, top earners, awards table |
-| Leaderboard | `/leaderboard` | All companies ranked by total obligated |
-| Company Profile | `/companies/:cageCode` | Deep dive on a single company |
+| Vendors | `/vendors` | All vendors ranked by total obligated |
+| Vendor Profile | `/vendors/:cageCode` | Deep dive on a single vendor |
 | Industry Explorer | `/industries` | Browse by NAICS code |
 | Awards Feed | `/awards` | Full filterable awards table |
-
----
-
-## Feature Ideas
-
-**Company Relationship Graph**
-A node-based network graph where each company is a node. Edges represent shared contracts, agencies, or NAICS codes. Visualizes which companies are winning awards in relation to each other. Uses the `numberOfOffersReceived` column to show how competitive each node's contracts are — e.g. a company winning sole source contracts (1 offer) vs. a company beating out 15 competitors.
-
-**Opportunity Finder**
-Surface contracts where competition is low and dollar value is high — the gaps where a new company could realistically win. Cross-reference extent competed, number of offers received, and award amount to score and rank open opportunities.
+| Sector Graph | `/graph` | Force-directed NAICS competitor network |
 
 ---
 
 ## API Reference
+
+All responses use **camelCase** field names. All list endpoints return a `{ data, pagination }` envelope.
 
 ### Vendors
 
 ```
 GET /api/vendors
   ?page=1&limit=25
-  ?sort=totalObligated&order=desc
+  ?sort=total_obligated&order=desc
   ?year=2010
-  ?naicsCode=517110
-  ?stateCode=VA
-  ?agencyCode=9700
-  ?setAsideType=SBA
+  ?naics_code=517110
+  ?state_code=VA
+  ?agency_code=9700
+  ?set_aside_code=SBA
   ?search=indyne
 
-GET /api/vendors/:uei
-GET /api/vendors/:uei/awards
+GET /api/vendors/:cage_code
+GET /api/vendors/:cage_code/awards
   ?page=1&limit=25
-  ?sort=dollarsObligated&order=desc
-  ?year=2010
-  ?agencyCode=9700
-  ?awardType=DEFINITIVE+CONTRACT
+  ?sort=award_amount&order=desc
 
-GET /api/vendors/:uei/awards/summary
+GET /api/vendors/:cage_code/awards/summary
 ```
 
 ### Awards
 
 ```
+GET /api/awards/headers
 GET /api/awards
   ?page=1&limit=25
-  ?sort=dollarsObligated&order=desc
+  ?sort=award_amount&order=desc
   ?year=2010
-  ?agencyCode=9700
-  ?naicsCode=517110
-  ?stateCode=CA
-  ?awardType=DEFINITIVE+CONTRACT
-  ?extentCompeted=D
+  ?agency_code=9700
+  ?naics_code=517110
+  ?state_code=CA
+  ?award_type=DEFINITIVE+CONTRACT
+  ?extent_competed=D
   ?search=communications
 ```
 
@@ -122,16 +113,10 @@ GET /api/awards
 ```
 GET /api/agencies
   ?page=1&limit=25
-  ?sort=name&order=asc
+  ?sort=total_obligated&order=asc
 
 GET /api/agencies/:code/awards
-  ?page=1&limit=25
-  ?sort=dollarsObligated&order=desc
-  ?year=2010
-
 GET /api/agencies/:code/vendors
-  ?page=1&limit=25
-  ?sort=totalObligated&order=desc
 ```
 
 ### NAICS
@@ -139,30 +124,30 @@ GET /api/agencies/:code/vendors
 ```
 GET /api/naics
   ?page=1&limit=25
-  ?sort=totalObligated&order=desc
+  ?sort=total_obligated&order=desc
 
+GET /api/naics/graph
 GET /api/naics/:code/awards
-  ?page=1&limit=25
-  ?year=2010
-
 GET /api/naics/:code/vendors
-  ?page=1&limit=25
 ```
 
-### Pagination Envelope
+### Analytics
 
-Every paginated endpoint returns:
+```
+GET /api/analytics/kpi
+GET /api/analytics/investment-scores
+GET /api/analytics/emerging-winners
+GET /api/analytics/risk-profile/:cage_code
+GET /api/analytics/sector-heatmap
+GET /api/analytics/win-rate/:cage_code
+GET /api/analytics/geographic-clustering
+```
 
-```json
-{
-  "data": [...],
-  "pagination": {
-    "page": 1,
-    "limit": 25,
-    "total": 84201,
-    "totalPages": 3369
-  }
-}
+### Health
+
+```
+GET /health
+GET /health/db
 ```
 
 ---

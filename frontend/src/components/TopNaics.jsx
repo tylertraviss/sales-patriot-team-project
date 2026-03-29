@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { getTopNaics } from '../services/api';
+
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 function fmt(n) {
-  const num = parseFloat(n);
-  if (num >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
-  if (num >= 1e6) return `$${(num / 1e6).toFixed(0)}M`;
-  return `$${(num / 1e3).toFixed(0)}K`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(0)}M`;
+  return `$${(n / 1e3).toFixed(0)}K`;
 }
 
 const CustomTick = ({ x, y, payload }) => (
   <text x={x} y={y} dy={4} textAnchor="end" fill="#9ca3af" fontSize={11}>
-    {payload.value?.length > 28 ? payload.value.slice(0, 28) + '…' : payload.value}
+    {payload.value.length > 28 ? payload.value.slice(0, 28) + '…' : payload.value}
   </text>
 );
 
@@ -20,9 +20,16 @@ export default function TopNaics() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getTopNaics()
-      .then(setData)
-      .catch(console.error)
+    fetch(`${BASE_URL}/naics?sort=total_obligated&order=desc&limit=8`)
+      .then((r) => r.ok ? r.json() : { data: [] })
+      .then((json) => {
+        setData((json.data ?? []).map((row) => ({
+          code:  row.code,
+          name:  row.name ?? row.code,
+          total: parseFloat(row.totalObligated) || 0,
+        })));
+      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -34,7 +41,7 @@ export default function TopNaics() {
       </div>
 
       {loading ? (
-        <div className="h-64 flex items-center justify-center text-sm text-gray-400">Loading...</div>
+        <div className="h-[260px] flex items-center justify-center text-gray-400 text-sm">Loading…</div>
       ) : (
         <ResponsiveContainer width="100%" height={260}>
           <BarChart data={data} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }}>
@@ -45,13 +52,13 @@ export default function TopNaics() {
               contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: 'none' }}
               cursor={{ fill: '#f9fafb' }}
             />
-            <Bar dataKey="total_obligated" fill="#3b82f6" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="total" fill="#3b82f6" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
       )}
 
       <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
-        Top 8 NAICS codes by dollars obligated · Live data
+        Top 8 NAICS codes by dollars obligated
       </p>
     </div>
   );

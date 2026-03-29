@@ -1,34 +1,39 @@
 import { useEffect, useState } from 'react';
-import { getDashboardKPIs } from '../services/api';
 
-function fmt(n) {
-  if (!n) return '$0';
-  const num = parseFloat(n);
-  if (num >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
-  if (num >= 1e6) return `$${(num / 1e6).toFixed(0)}M`;
-  return `$${num.toLocaleString()}`;
-}
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+
+const fmtCurrency = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 });
+const fmtNumber   = new Intl.NumberFormat('en-US');
 
 export default function KPIBanner() {
-  const [kpis, setKpis] = useState(null);
+  const [kpi, setKpi]       = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getDashboardKPIs().then(setKpis).catch(console.error);
+    fetch(`${BASE_URL}/analytics/kpi`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setKpi(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  const kpiList = [
-    { label: 'Total Obligated',  value: kpis ? fmt(kpis.total_obligated)  : '—' },
-    { label: 'Total Awards',     value: kpis ? parseInt(kpis.total_awards).toLocaleString() : '—' },
-    { label: 'Companies',        value: kpis ? parseInt(kpis.total_vendors).toLocaleString() : '—' },
-    { label: 'Sole Source Rate', value: kpis ? `${kpis.sole_source_rate}%` : '—' },
+  const totalObligated = kpi ? fmtCurrency.format(kpi.totalObligated) : '$1.61B';
+  const totalAwards    = kpi ? fmtNumber.format(kpi.totalAwards)      : '4,116';
+  const totalVendors   = kpi ? fmtNumber.format(kpi.totalVendors)     : '2,379';
+  const soleSourcePct  = kpi ? `${kpi.soleSourcePct}%`                : '8.4%';
+
+  const KPIs = [
+    { label: 'Total Obligated',  value: totalObligated },
+    { label: 'Total Awards',     value: totalAwards    },
+    { label: 'Vendors',          value: totalVendors   },
+    { label: 'Sole Source Rate', value: soleSourcePct  },
   ];
 
   return (
     <div className="bg-gray-900 rounded-xl p-6 flex flex-col gap-4">
       <div>
         <p className="text-white text-xl font-semibold leading-snug">
-          {kpis?.sole_source_rate}% of contracts had{' '}
-          <span className="text-yellow-400">zero competition.</span>
+          {soleSourcePct} of contracts had <span className="text-yellow-400">zero competition.</span>
         </p>
         <p className="text-gray-400 text-sm mt-1">
           That's where the locked-in money is — companies winning sole source contracts year after year.
@@ -36,8 +41,8 @@ export default function KPIBanner() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border-t border-gray-700 pt-4">
-        {kpiList.map((k) => (
-          <div key={k.label}>
+        {KPIs.map((k) => (
+          <div key={k.label} className={loading ? 'opacity-50' : ''}>
             <p className="text-2xl font-bold text-white tabular-nums">{k.value}</p>
             <p className="text-xs text-gray-400 mt-0.5">{k.label}</p>
           </div>

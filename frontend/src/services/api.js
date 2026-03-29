@@ -45,8 +45,49 @@ export async function getAwardHeaders() {
   return data.headers;
 }
 
+/**
+ * Fetch paginated awards with optional filters.
+ * @param {object} params - { page, limit, sort, order, year, agencyCode, naicsCode, stateCode, ... }
+ */
 export async function getAwards(params = {}) {
   const { data } = await api.get('/awards', { params });
+  return data; // { data, pagination }
+}
+
+// ---------------------------------------------------------------------------
+// Vendors
+// ---------------------------------------------------------------------------
+
+/**
+ * Search / list vendors.
+ * @param {object} params - { search, state_code, naics_code, agency_code, set_aside_code, year, page, limit, sort, order }
+ */
+export async function getVendors(params = {}) {
+  const { data } = await api.get('/vendors', { params });
+  return data; // { data, pagination }
+}
+
+/**
+ * Fetch a single vendor by CAGE code.
+ */
+export async function getVendor(cageCode) {
+  const { data } = await api.get(`/vendors/${cageCode}`);
+  return data;
+}
+
+/**
+ * Fetch awards for a specific vendor by CAGE code.
+ */
+export async function getVendorAwards(cageCode, params = {}) {
+  const { data } = await api.get(`/vendors/${cageCode}/awards`, { params });
+  return data;
+}
+
+/**
+ * Fetch award summary (by year, agency, competition) for a vendor by CAGE code.
+ */
+export async function getVendorSummary(cageCode) {
+  const { data } = await api.get(`/vendors/${cageCode}/awards/summary`);
   return data;
 }
 

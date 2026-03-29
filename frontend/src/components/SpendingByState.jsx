@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { getSpendingByState } from '../services/api';
+
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 
 const COLORS = ['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe', '#e0f2fe', '#f0f9ff', '#f8fafc', '#f1f5f9', '#e2e8f0'];
 
 function fmt(n) {
-  const num = parseFloat(n);
-  if (num >= 1e9) return `$${(num / 1e9).toFixed(1)}B`;
-  if (num >= 1e6) return `$${(num / 1e6).toFixed(0)}M`;
-  return `$${(num / 1e3).toFixed(0)}K`;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(0)}M`;
+  return `$${(n / 1e3).toFixed(0)}K`;
 }
 
 export default function SpendingByState() {
@@ -16,9 +16,16 @@ export default function SpendingByState() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getSpendingByState()
-      .then(setData)
-      .catch(console.error)
+    fetch(`${BASE_URL}/analytics/geographic-clustering?limit=10`)
+      .then((r) => r.ok ? r.json() : { data: [] })
+      .then((json) => {
+        const rows = (json.data ?? []).slice(0, 10).map((s) => ({
+          state: s.stateCode,
+          total: parseFloat(s.totalObligated) || 0,
+        }));
+        setData(rows);
+      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -30,7 +37,7 @@ export default function SpendingByState() {
       </div>
 
       {loading ? (
-        <div className="h-48 flex items-center justify-center text-sm text-gray-400">Loading...</div>
+        <div className="h-[240px] flex items-center justify-center text-gray-400 text-sm">Loading…</div>
       ) : (
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={data} margin={{ top: 0, right: 8, left: 0, bottom: 0 }}>
@@ -41,7 +48,7 @@ export default function SpendingByState() {
               contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e5e7eb', boxShadow: 'none' }}
               cursor={{ fill: '#f9fafb' }}
             />
-            <Bar dataKey="total_obligated" radius={[4, 4, 0, 0]}>
+            <Bar dataKey="total" radius={[4, 4, 0, 0]}>
               {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
             </Bar>
           </BarChart>
@@ -49,7 +56,7 @@ export default function SpendingByState() {
       )}
 
       <p className="text-xs text-gray-400 border-t border-gray-100 pt-3">
-        Top 10 states by dollars obligated · Live data
+        Top 10 states by dollars obligated
       </p>
     </div>
   );
