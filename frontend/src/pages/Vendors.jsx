@@ -290,7 +290,7 @@ export default function Vendors() {
 
       {/* Vendor detail drawer — shared between both views */}
       <VendorDetailDrawer
-        cageCode={selectedVendor?.cageCode ?? selectedVendor?.uei}
+        cageCode={selectedVendor?.cageCode || selectedVendor?.uei}
         vendorName={selectedVendor?.name}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
