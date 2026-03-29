@@ -45,12 +45,34 @@ cd ../frontend && npm run dev
 |---|---|
 | Backend API | Node.js + Express |
 | Database | PostgreSQL |
-| Frontend | React + Vite + TypeScript |
-| UI Components | shadcn/ui + Tailwind CSS |
+| Frontend | React + Vite + Tailwind CSS |
+| Charts | Recharts |
 | File Uploads | Multer (CSV streaming to DB) |
 | Logging | Winston |
 | CI | GitHub Actions |
 | Infrastructure | Docker Compose |
+
+---
+
+## Pages
+
+| Page | Route | Description |
+|---|---|---|
+| Dashboard | `/` | Overview charts, top earners, awards table |
+| Leaderboard | `/leaderboard` | All companies ranked by total obligated |
+| Company Profile | `/companies/:cageCode` | Deep dive on a single company |
+| Industry Explorer | `/industries` | Browse by NAICS code |
+| Awards Feed | `/awards` | Full filterable awards table |
+
+---
+
+## Feature Ideas
+
+**Company Relationship Graph**
+A node-based network graph where each company is a node. Edges represent shared contracts, agencies, or NAICS codes. Visualizes which companies are winning awards in relation to each other. Uses the `numberOfOffersReceived` column to show how competitive each node's contracts are — e.g. a company winning sole source contracts (1 offer) vs. a company beating out 15 competitors.
+
+**Opportunity Finder**
+Surface contracts where competition is low and dollar value is high — the gaps where a new company could realistically win. Cross-reference extent competed, number of offers received, and award amount to score and rank open opportunities.
 
 ---
 
