@@ -156,3 +156,6 @@ GET /health/db
 
 - **Backend team** — server, API routes, data ingestion, DB schema
 - **Frontend team** — display, upload UI, consumes headers from `/api/awards/headers`
+
+
+build regressional predictive trend for companies based off historic
