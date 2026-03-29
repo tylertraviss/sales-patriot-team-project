@@ -2,7 +2,6 @@ import KPIBanner from '../components/KPIBanner';
 import TopNaics from '../components/TopNaics';
 import SpendingByState from '../components/SpendingByState';
 import TopEarners from '../components/TopEarners';
-import AwardsTable from '../components/AwardsTable';
 
 export default function Dashboard() {
   return (
@@ -18,9 +17,6 @@ export default function Dashboard() {
         <TopNaics />
         <SpendingByState />
       </div>
-
-      {/* Awards table */}
-      <AwardsTable cageCode={null} />
     </div>
   );
 }
