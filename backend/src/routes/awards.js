@@ -1,193 +1,111 @@
 const express = require('express');
-const router = express.Router();
-const db = require('../db/connection');
-const logger = require('../logger');
-const { createHttpError } = require('../utils/http');
+const router  = express.Router();
+const db      = require('../db/connection');
 
-const AWARD_HEADERS = [
-  { key: 'cage_code', label: 'CAGE Code', type: 'string' },
-  { key: 'company_name', label: 'Company Name', type: 'string' },
-  { key: 'contract_number', label: 'Contract Number', type: 'string' },
-  { key: 'award_amount', label: 'Award Amount', type: 'currency' },
-  { key: 'award_date', label: 'Award Date', type: 'date' },
-  { key: 'dla_office', label: 'DLA Office', type: 'string' },
-  { key: 'description', label: 'Description', type: 'text' },
-];
+const ALLOWED_SORT = new Set(['award_amount', 'award_date', 'date_signed']);
 
-const SORT_COLUMNS = {
-  award_date: 'a.award_date',
-  award_amount: 'a.award_amount',
-  cage_code: 'v.cage_code',
-  company_name: 'v.vendor_name',
-  contract_number: 'a.contract_number',
-  dla_office: 'a.contracting_office_name',
-};
-
-// GET /api/awards/headers
-router.get('/headers', (req, res) => {
-  logger.debug('headers requested', { requestId: req.id });
-  res.json({ headers: AWARD_HEADERS });
-});
+function paginate(page, limit) {
+  const p = Math.max(1, parseInt(page, 10) || 1);
+  const l = Math.min(100, Math.max(1, parseInt(limit, 10) || 25));
+  return { page: p, limit: l, offset: (p - 1) * l };
+}
 
 // GET /api/awards
-// Query params: cageCode, page, limit, sortBy, sortDir
 router.get('/', async (req, res, next) => {
   try {
     const {
-      cageCode,
-      page = '1',
-      limit = '50',
-      sortBy = 'award_date',
-      sortDir = 'DESC',
+      year, agency_code, naics_code, state_code,
+      award_type, set_aside_code, extent_competed,
+      search,
+      sort = 'award_date', order = 'desc',
+      page, limit,
     } = req.query;
 
-    const pageNum = Math.max(1, Number.parseInt(page, 10) || 1);
-    const limitNum = Math.min(500, Math.max(1, Number.parseInt(limit, 10) || 50));
-    const offset = (pageNum - 1) * limitNum;
-    const col = SORT_COLUMNS[sortBy] || SORT_COLUMNS.award_date;
-    const dir = sortDir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    const { page: p, limit: l, offset } = paginate(page, limit);
+    const col = ALLOWED_SORT.has(sort) ? sort : 'award_date';
+    const dir = order.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
-    const values = [];
     const conditions = [];
+    const values     = [];
 
-    if (cageCode) {
-      values.push(cageCode.toUpperCase());
-      conditions.push(`v.cage_code = $${values.length}`);
+    if (year) {
+      values.push(parseInt(year, 10));
+      conditions.push(`COALESCE(a.award_fiscal_year, a.contract_fiscal_year) = $${values.length}`);
+    }
+    if (agency_code) {
+      values.push(agency_code);
+      conditions.push(`a.contracting_agency_code = $${values.length}`);
+    }
+    if (naics_code) {
+      values.push(naics_code);
+      conditions.push(`a.naics_code = $${values.length}`);
+    }
+    if (state_code) {
+      values.push(state_code.toUpperCase());
+      conditions.push(`a.place_of_performance_state_code = $${values.length}`);
+    }
+    if (award_type) {
+      values.push(award_type);
+      conditions.push(`a.award_type_description ILIKE $${values.length}`);
+    }
+    if (set_aside_code) {
+      values.push(set_aside_code);
+      conditions.push(`a.set_aside_code = $${values.length}`);
+    }
+    if (extent_competed) {
+      values.push(extent_competed);
+      conditions.push(`a.extent_competed_code = $${values.length}`);
+    }
+    if (search) {
+      values.push(search);
+      conditions.push(`a.description_of_requirement ILIKE '%' || $${values.length} || '%'`);
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
-    const dataQuery = `
-      SELECT
-        a.award_tx_id AS id,
-        v.cage_code,
-        v.vendor_name AS company_name,
-        a.contract_number,
-        a.award_amount,
-        a.award_date,
-        a.contracting_office_name AS dla_office,
-        a.description_of_requirement AS description,
-        a.created_at
-      FROM award_transactions a
-      JOIN vendor_entities v ON v.vendor_id = a.vendor_id
-      ${where}
-      ORDER BY ${col} ${dir} NULLS LAST, a.award_tx_id DESC
-      LIMIT $${values.length + 1}
-      OFFSET $${values.length + 2}
-    `;
-
-    const countQuery = `
-      SELECT COUNT(*) AS total
-      FROM award_transactions a
-      JOIN vendor_entities v ON v.vendor_id = a.vendor_id
-      ${where}
-    `;
-
     const [dataResult, countResult] = await Promise.all([
-      db.query(dataQuery, [...values, limitNum, offset]),
-      db.query(countQuery, values),
+      db.query(`
+        SELECT
+          a.piid,
+          a.modification_number,
+          a.award_amount           AS dollars_obligated,
+          a.award_date,
+          a.date_signed,
+          a.award_type_description AS award_type,
+          a.naics_code,
+          a.naics_description,
+          a.product_service_code,
+          a.contracting_agency_code AS agency_code,
+          a.contracting_agency_name AS agency_name,
+          a.place_of_performance_state_code AS state_code,
+          a.set_aside_code,
+          a.set_aside_name,
+          a.extent_competed_code,
+          a.extent_competed_name,
+          a.description_of_requirement,
+          v.cage_code               AS vendor_cage,
+          v.uei                     AS vendor_uei,
+          v.vendor_name             AS vendor_name
+        FROM award_transactions a
+        JOIN vendor_entities v ON v.vendor_id = a.vendor_id
+        ${where}
+        ORDER BY a.${col} ${dir}
+        LIMIT $${values.length + 1} OFFSET $${values.length + 2}
+      `, [...values, l, offset]),
+      db.query(`
+        SELECT COUNT(*) AS total
+        FROM award_transactions a
+        JOIN vendor_entities v ON v.vendor_id = a.vendor_id
+        ${where}
+      `, values),
     ]);
-
-    const total = Number.parseInt(countResult.rows[0].total, 10);
-
-    logger.info('awards list served', {
-      requestId: req.id,
-      total,
-      page: pageNum,
-      limit: limitNum,
-      cageCode: cageCode || null,
-    });
 
     res.json({
       data: dataResult.rows,
       pagination: {
-        total,
-        page: pageNum,
-        limit: limitNum,
-        totalPages: Math.ceil(total / limitNum),
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// GET /api/awards/:cageCode
-router.get('/:cageCode', async (req, res, next) => {
-  try {
-    const { cageCode } = req.params;
-    const {
-      page = '1',
-      limit = '50',
-      sortBy = 'award_date',
-      sortDir = 'DESC',
-    } = req.query;
-
-    const pageNum = Math.max(1, Number.parseInt(page, 10) || 1);
-    const limitNum = Math.min(500, Math.max(1, Number.parseInt(limit, 10) || 50));
-    const offset = (pageNum - 1) * limitNum;
-    const col = SORT_COLUMNS[sortBy] || SORT_COLUMNS.award_date;
-    const dir = sortDir.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-    const normalizedCageCode = cageCode.toUpperCase();
-
-    const [dataResult, countResult, companyResult] = await Promise.all([
-      db.query(
-        `SELECT
-           a.award_tx_id AS id,
-           v.cage_code,
-           v.vendor_name AS company_name,
-           a.contract_number,
-           a.award_amount,
-           a.award_date,
-           a.contracting_office_name AS dla_office,
-           a.description_of_requirement AS description,
-           a.created_at
-         FROM award_transactions a
-         JOIN vendor_entities v ON v.vendor_id = a.vendor_id
-         WHERE v.cage_code = $1
-         ORDER BY ${col} ${dir} NULLS LAST, a.award_tx_id DESC
-         LIMIT $2 OFFSET $3`,
-        [normalizedCageCode, limitNum, offset],
-      ),
-      db.query(
-        `SELECT COUNT(*) AS total
-         FROM award_transactions a
-         JOIN vendor_entities v ON v.vendor_id = a.vendor_id
-         WHERE v.cage_code = $1`,
-        [normalizedCageCode],
-      ),
-      db.query(
-        `SELECT
-           cage_code,
-           company_name,
-           uei,
-           award_count,
-           contract_count,
-           total_obligated_amount AS total_award_amount,
-           latest_fiscal_year,
-           latest_year_obligated_amount,
-           yoy_growth_pct
-         FROM cage_code_investment_summary
-         WHERE cage_code = $1`,
-        [normalizedCageCode],
-      ),
-    ]);
-
-    if (companyResult.rows.length === 0) {
-      logger.warn('CAGE code not found', { requestId: req.id, cageCode: normalizedCageCode });
-      throw createHttpError(404, `CAGE code ${normalizedCageCode} not found`);
-    }
-
-    const total = Number.parseInt(countResult.rows[0].total, 10);
-
-    res.json({
-      company: companyResult.rows[0],
-      data: dataResult.rows,
-      pagination: {
-        total,
-        page: pageNum,
-        limit: limitNum,
-        totalPages: Math.ceil(total / limitNum),
+        page: p, limit: l,
+        total: parseInt(countResult.rows[0].total, 10),
+        totalPages: Math.ceil(countResult.rows[0].total / l),
       },
     });
   } catch (err) {

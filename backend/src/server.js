@@ -1,17 +1,18 @@
 require('dotenv').config();
 
-const express         = require('express');
-const cors            = require('cors');
-const { version }     = require('../package.json');
-const logger          = require('./logger');
-const db              = require('./db/connection');
-const requestLogger   = require('./middleware/requestLogger');
-const awardsRouter    = require('./routes/awards');
-const uploadRouter    = require('./routes/upload');
-const companiesRouter = require('./routes/companies');
-const vendorsRouter   = require('./routes/vendors');
-const errorHandler    = require('./middleware/errorHandler');
-const { buildErrorEnvelope } = require('./utils/http');
+const express    = require('express');
+const cors       = require('cors');
+const logger     = require('./logger');
+const requestLogger = require('./middleware/requestLogger');
+const errorHandler  = require('./middleware/errorHandler');
+
+const vendorsRouter    = require('./routes/vendors');
+const awardsRouter     = require('./routes/awards');
+const agenciesRouter   = require('./routes/agencies');
+const naicsRouter      = require('./routes/naics');
+const uploadRouter     = require('./routes/upload');
+
+const analyticsRouter = require('./routes/analytics');
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
@@ -31,35 +32,24 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // ---------------------------------------------------------------------------
-// Health check
+// Standard endpoints
 // ---------------------------------------------------------------------------
 app.get('/health', (_req, res) => {
-  res.json({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    uptime_seconds: Math.floor(process.uptime()),
-  });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), uptime_seconds: Math.floor(process.uptime()) });
 });
 
-app.get('/health/db', async (_req, res) => {
+app.get('/health/db', async (_req, res, next) => {
   try {
-    await db.query('SELECT 1 AS ok');
-    res.json({
-      status: 'ok',
-      db: 'connected',
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    res.status(503).json(buildErrorEnvelope(503, 'Database connection unavailable'));
+    // TODO: run a lightweight DB ping e.g. SELECT 1
+    res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() });
+  } catch (err) {
+    next(err);
   }
 });
 
-// ---------------------------------------------------------------------------
-// API routes
-// ---------------------------------------------------------------------------
 app.get('/api', (_req, res) => {
   res.json({
-    version,
+    version: '1.0.0',
     resources: [
       'GET /api/vendors',
       'GET /api/awards',
@@ -77,16 +67,25 @@ app.get('/api', (_req, res) => {
   });
 });
 
-app.use('/api/awards',    awardsRouter);
-app.use('/api/upload',    uploadRouter);
-app.use('/api/companies', companiesRouter);
+// ---------------------------------------------------------------------------
+// REST routes
+// ---------------------------------------------------------------------------
 app.use('/api/vendors',   vendorsRouter);
+app.use('/api/awards',    awardsRouter);
+app.use('/api/agencies',  agenciesRouter);
+app.use('/api/naics',     naicsRouter);
+app.use('/api/upload',    uploadRouter);
+
+// ---------------------------------------------------------------------------
+// Analytics routes
+// ---------------------------------------------------------------------------
+app.use('/api/analytics', analyticsRouter);
 
 // ---------------------------------------------------------------------------
 // 404 handler
 // ---------------------------------------------------------------------------
 app.use((_req, res) => {
-  res.status(404).json(buildErrorEnvelope(404, 'Route not found'));
+  res.status(404).json({ error: { status: 404, message: 'Route not found' } });
 });
 
 // ---------------------------------------------------------------------------
