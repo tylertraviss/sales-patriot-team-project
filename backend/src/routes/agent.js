@@ -3,6 +3,7 @@ const router  = express.Router();
 const db      = require('../db/connection');
 
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'anthropic/claude-opus-4.6';
 
 const BASE_SYSTEM_PROMPT = `You are a government contracting intelligence assistant built into Sales Patriot — a platform that helps BD and sales teams identify, analyze, and pursue federal contracting opportunities.
 
@@ -165,7 +166,8 @@ router.post('/chat', async (req, res, next) => {
         'X-Title':        'Sales Patriot',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: OPENROUTER_MODEL,
+        reasoning: { enabled: true },
         stream: true,
         messages: [
           { role: 'system', content: systemContent },
@@ -231,7 +233,8 @@ router.post('/suggestions', async (req, res, next) => {
         'X-Title':       'Sales Patriot',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
+        model: OPENROUTER_MODEL,
+        reasoning: { enabled: true },
         stream: false,
         messages: [
           { role: 'system', content: systemContent },
