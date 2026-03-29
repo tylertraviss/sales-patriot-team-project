@@ -5,8 +5,11 @@ import {
 } from './mockApi';
 import {
   getVendor as apiGetVendor,
+  getVendorById as apiGetVendorById,
   getVendorSummary as apiGetVendorSummary,
+  getVendorSummaryById as apiGetVendorSummaryById,
   getVendorAwards as apiGetVendorAwards,
+  getVendorAwardsById as apiGetVendorAwardsById,
   getWinRate as apiGetWinRate,
 } from './api';
 
@@ -18,6 +21,10 @@ export function getVendor(cageCode) {
   return apiGetVendor(cageCode);
 }
 
+export function getVendorById(vendorId) {
+  return apiGetVendorById(vendorId);
+}
+
 /**
  * GET /api/vendors/:cage_code/awards/summary
  * Returns aggregate breakdown: by year, agency, competition, etc.
@@ -27,6 +34,10 @@ export function getVendorSummary(cageCode) {
   return apiGetVendorSummary(cageCode);
 }
 
+export function getVendorSummaryById(vendorId) {
+  return apiGetVendorSummaryById(vendorId);
+}
+
 /**
  * GET /api/vendors/:cage_code/awards
  * Paginated list of individual contracts.
@@ -34,6 +45,10 @@ export function getVendorSummary(cageCode) {
 export function getVendorAwards(cageCode, params = {}) {
   if (USE_MOCK) return mockGetVendorAwards(cageCode, params);
   return apiGetVendorAwards(cageCode, params);
+}
+
+export function getVendorAwardsById(vendorId, params = {}) {
+  return apiGetVendorAwardsById(vendorId, params);
 }
 
 /**

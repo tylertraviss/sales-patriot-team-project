@@ -53,17 +53,27 @@ app.get('/api', (_req, res) => {
     version: '1.0.0',
     resources: [
       'GET /api/vendors',
+      'GET /api/vendors/id/:vendorId',
       'GET /api/awards',
       'GET /api/agencies',
       'GET /api/naics',
     ],
     analytics: [
+      'GET /api/analytics/filters',
+      'GET /api/analytics/opportunity-heatmap',
       'GET /api/analytics/investment-scores',
       'GET /api/analytics/emerging-winners',
+      'GET /api/analytics/vendor-moat',
+      'GET /api/analytics/risk-profile/vendor/:vendorId',
       'GET /api/analytics/risk-profile/:cage_code',
-      'GET /api/analytics/sector-heatmap',
+      'GET /api/analytics/sole-source-opportunities',
+      'GET /api/analytics/market-concentration',
       'GET /api/analytics/win-rate/:cage_code',
       'GET /api/analytics/geographic-clustering',
+      'GET /api/analytics/naics-trends',
+      'GET /api/analytics/repeat-winners',
+      'GET /api/analytics/revenue-stability/vendor/:vendorId',
+      'GET /api/analytics/sector-heatmap',
     ],
   });
 });

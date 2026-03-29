@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getVendorAwards } from '@/services/vendors';
+import { getVendorAwards, getVendorAwardsById } from '@/services/vendors';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -46,7 +46,7 @@ function cellValue(row, key) {
   return <span className="truncate max-w-[160px] block" title={String(v)}>{String(v)}</span>;
 }
 
-export default function VendorAwardsTable({ cageCode }) {
+export default function VendorAwardsTable({ cageCode, vendorId }) {
   const [awards, setAwards] = useState([]);
   const [meta, setMeta] = useState(null);
   const [page, setPage] = useState(1);
@@ -55,11 +55,12 @@ export default function VendorAwardsTable({ cageCode }) {
   const [error, setError] = useState(null);
 
   const fetchAwards = useCallback(async () => {
-    if (!cageCode) return;
+    if (!cageCode && !vendorId) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await getVendorAwards(cageCode, {
+      const loader = vendorId ? getVendorAwardsById : getVendorAwards;
+      const res = await loader(vendorId || cageCode, {
         page,
         limit,
         sort: 'award_amount',
@@ -72,7 +73,7 @@ export default function VendorAwardsTable({ cageCode }) {
     } finally {
       setLoading(false);
     }
-  }, [cageCode, page, limit]);
+  }, [cageCode, vendorId, page, limit]);
 
   useEffect(() => { fetchAwards(); }, [fetchAwards]);
 
@@ -114,7 +115,7 @@ export default function VendorAwardsTable({ cageCode }) {
               </TableRow>
             )}
             {!loading && !error && awards.map((row, i) => (
-              <TableRow key={row.piid ?? i}>
+              <TableRow key={row.awardTxId ?? row.piid ?? i}>
                 {cols.map((c) => (
                   <TableCell key={c.key} className={cn(c.align === 'right' && 'text-right', 'text-xs py-2')}>
                     {cellValue(row, c.key)}

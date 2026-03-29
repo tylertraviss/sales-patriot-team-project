@@ -1,547 +1,1064 @@
 const express = require('express');
-const router  = express.Router();
-const db      = require('../db/connection');
 
-// ---------------------------------------------------------------------------
-// GET /api/analytics/kpi
-// Dashboard headline numbers: total obligated, award count, vendor count,
-// sole-source rate.
-// ---------------------------------------------------------------------------
+const router = express.Router();
+const db = require('../db/connection');
+
+const COMPETED_CODES = ['A', 'B', 'C', 'D', 'E', 'F'];
+const SOLE_SOURCE_CODES = ['G', 'H', 'CDO'];
+
+function parseLimit(value, { fallback = 25, min = 1, max = 50 } = {}) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function normalizeCode(value) {
+  return typeof value === 'string' && value.trim() ? value.trim().toUpperCase() : null;
+}
+
+function fiscalYearExpr(alias = 'a') {
+  return `COALESCE(${alias}.award_fiscal_year, ${alias}.contract_fiscal_year, EXTRACT(YEAR FROM COALESCE(${alias}.award_date, ${alias}.date_signed, ${alias}.reveal_date))::INT)`;
+}
+
+function competitionBucketExpr(alias = 'a') {
+  const competed = COMPETED_CODES.map((code) => `'${code}'`).join(', ');
+  const soleSource = SOLE_SOURCE_CODES.map((code) => `'${code}'`).join(', ');
+
+  return `
+    CASE
+      WHEN ${alias}.extent_competed_code IN (${competed}) THEN 'competed'
+      WHEN ${alias}.extent_competed_code IN (${soleSource}) THEN 'sole_source'
+      ELSE 'unknown'
+    END
+  `;
+}
+
+function buildAwardFilters(query, { alias = 'a', values = [] } = {}) {
+  const conditions = [];
+
+  if (query.year) {
+    values.push(Number.parseInt(query.year, 10));
+    conditions.push(`${fiscalYearExpr(alias)} = $${values.length}`);
+  }
+
+  if (query.agency_code) {
+    values.push(normalizeCode(query.agency_code));
+    conditions.push(`${alias}.contracting_agency_code = $${values.length}`);
+  }
+
+  if (query.naics_code) {
+    values.push(normalizeCode(query.naics_code));
+    conditions.push(`${alias}.naics_code = $${values.length}`);
+  }
+
+  if (query.state_code) {
+    values.push(normalizeCode(query.state_code));
+    conditions.push(`${alias}.place_of_performance_state_code = $${values.length}`);
+  }
+
+  if (query.set_aside_code) {
+    values.push(normalizeCode(query.set_aside_code));
+    conditions.push(`${alias}.set_aside_code = $${values.length}`);
+  }
+
+  if (query.competition_bucket) {
+    values.push(String(query.competition_bucket).trim().toLowerCase());
+    conditions.push(`${competitionBucketExpr(alias)} = $${values.length}`);
+  }
+
+  return { conditions, values };
+}
+
+function buildVendorExistenceClause(query, { vendorAlias = 'v', values = [] } = {}) {
+  const parts = buildAwardFilters(query, { alias: 'a', values });
+  const conditions = [`a.vendor_id = ${vendorAlias}.vendor_id`, ...parts.conditions];
+
+  return {
+    clause: `EXISTS (SELECT 1 FROM award_transactions a WHERE ${conditions.join(' AND ')})`,
+    values: parts.values,
+  };
+}
+
+async function findVendorByIdentifier(identifier) {
+  const raw = String(identifier || '').trim();
+  if (!raw) {
+    return null;
+  }
+
+  const result = await db.query(
+    `SELECT
+       vendor_id AS "vendorId",
+       cage_code AS "cageCode",
+       uei,
+       vendor_name AS name
+     FROM vendor_entities
+     WHERE vendor_id::text = $1
+        OR cage_code = $2
+        OR uei = $2
+     LIMIT 1`,
+    [raw, raw.toUpperCase()],
+  );
+
+  return result.rows[0] || null;
+}
+
+async function buildRiskProfile(vendorId, query) {
+  const values = [vendorId];
+  const parts = buildAwardFilters(query, { alias: 'a', values });
+  const where = `WHERE a.vendor_id = $1${parts.conditions.length ? ` AND ${parts.conditions.join(' AND ')}` : ''}`;
+
+  const [vendorResult, agencyResult, concentrationResult, contractTypeResult] = await Promise.all([
+    db.query(
+      `SELECT vendor_id AS "vendorId", cage_code AS "cageCode", uei, vendor_name AS name
+       FROM vendor_entities
+       WHERE vendor_id = $1`,
+      [vendorId],
+    ),
+    db.query(
+      `WITH grouped AS (
+         SELECT
+           a.contracting_agency_code AS "agencyCode",
+           COALESCE(MAX(a.contracting_agency_name), a.contracting_agency_code) AS "agencyName",
+           SUM(COALESCE(a.award_amount, 0)) AS obligated
+         FROM award_transactions a
+         ${where}
+         AND a.contracting_agency_code IS NOT NULL
+         AND BTRIM(a.contracting_agency_code) <> ''
+         GROUP BY a.contracting_agency_code
+       )
+       SELECT
+         "agencyCode",
+         "agencyName",
+         obligated AS "totalObligated",
+         ROUND(100.0 * obligated / NULLIF(SUM(obligated) OVER (), 0), 2) AS "sharePct"
+       FROM grouped
+       ORDER BY obligated DESC
+       LIMIT 8`,
+      values,
+    ),
+    db.query(
+      `WITH grouped AS (
+         SELECT
+           a.contracting_agency_code,
+           SUM(COALESCE(a.award_amount, 0)) AS obligated
+         FROM award_transactions a
+         ${where}
+         AND a.contracting_agency_code IS NOT NULL
+         AND BTRIM(a.contracting_agency_code) <> ''
+         GROUP BY a.contracting_agency_code
+       ),
+       shares AS (
+         SELECT obligated / NULLIF(SUM(obligated) OVER (), 0) AS share_fraction
+         FROM grouped
+       )
+       SELECT
+         ROUND(100.0 * MAX(share_fraction), 2) AS "topAgencySharePct",
+         ROUND(SUM(POWER(share_fraction, 2)) * 10000, 0) AS "concentrationScore"
+       FROM shares`,
+      values,
+    ),
+    db.query(
+      `SELECT
+         COALESCE(NULLIF(a.award_type_description, ''), 'Unknown') AS "awardType",
+         SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+         COUNT(*)::INT AS "awardCount"
+       FROM award_transactions a
+       ${where}
+       GROUP BY COALESCE(NULLIF(a.award_type_description, ''), 'Unknown')
+       ORDER BY "totalObligated" DESC
+       LIMIT 8`,
+      values,
+    ),
+  ]);
+
+  if (!vendorResult.rows.length) {
+    return null;
+  }
+
+  const vendor = vendorResult.rows[0];
+  const concentration = concentrationResult.rows[0] || {};
+
+  return {
+    vendorId: vendor.vendorId,
+    cageCode: vendor.cageCode,
+    uei: vendor.uei,
+    name: vendor.name,
+    topAgencies: agencyResult.rows,
+    topAgencySharePct: Number(concentration.topAgencySharePct || 0),
+    concentrationScore: Number(concentration.concentrationScore || 0),
+    contractTypeBreakdown: contractTypeResult.rows,
+  };
+}
+
 router.get('/kpi', async (_req, res, next) => {
   try {
     const result = await db.query(`
       SELECT
-        SUM(a.award_amount)                                               AS "totalObligated",
-        COUNT(*)                                                          AS "totalAwards",
-        COUNT(DISTINCT a.vendor_id)                                       AS "totalVendors",
+        SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+        COUNT(*)::INT AS "totalAwards",
+        COUNT(DISTINCT a.vendor_id)::INT AS "totalVendors",
         ROUND(
-          100.0 * COUNT(*) FILTER (WHERE a.extent_competed_code IN ('G','H','CDO'))
+          100.0 * COUNT(*) FILTER (WHERE ${competitionBucketExpr('a')} = 'sole_source')
           / NULLIF(COUNT(*), 0),
-        2)                                                                AS "soleSourcePct"
+          2
+        ) AS "soleSourcePct"
       FROM award_transactions a
     `);
 
-    const row = result.rows[0];
+    const row = result.rows[0] || {};
     res.json({
-      totalObligated: parseFloat(row.totalObligated) || 0,
-      totalAwards:    parseInt(row.totalAwards, 10) || 0,
-      totalVendors:   parseInt(row.totalVendors, 10) || 0,
-      soleSourcePct:  parseFloat(row.soleSourcePct) || 0,
+      totalObligated: Number(row.totalObligated || 0),
+      totalAwards: Number(row.totalAwards || 0),
+      totalVendors: Number(row.totalVendors || 0),
+      soleSourcePct: Number(row.soleSourcePct || 0),
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/analytics/investment-scores
-// ---------------------------------------------------------------------------
+router.get('/filters', async (_req, res, next) => {
+  try {
+    const [years, agencies, naics, states, setAsides] = await Promise.all([
+      db.query(`
+        SELECT DISTINCT ${fiscalYearExpr('a')} AS "fiscalYear"
+        FROM award_transactions a
+        WHERE ${fiscalYearExpr('a')} IS NOT NULL
+        ORDER BY "fiscalYear" DESC
+      `),
+      db.query(`
+        SELECT
+          a.contracting_agency_code AS code,
+          COALESCE(MAX(a.contracting_agency_name), a.contracting_agency_code) AS name
+        FROM award_transactions a
+        WHERE a.contracting_agency_code IS NOT NULL
+          AND BTRIM(a.contracting_agency_code) <> ''
+        GROUP BY a.contracting_agency_code
+        ORDER BY name ASC
+      `),
+      db.query(`
+        SELECT
+          a.naics_code AS code,
+          COALESCE(MAX(n.description), MAX(a.naics_description), a.naics_code) AS name
+        FROM award_transactions a
+        LEFT JOIN naics_codes n ON n.code = a.naics_code
+        WHERE a.naics_code IS NOT NULL
+          AND BTRIM(a.naics_code) <> ''
+        GROUP BY a.naics_code
+        ORDER BY name ASC
+      `),
+      db.query(`
+        SELECT
+          a.place_of_performance_state_code AS code,
+          COALESCE(MAX(a.place_of_performance_state_name), a.place_of_performance_state_code) AS name
+        FROM award_transactions a
+        WHERE a.place_of_performance_state_code IS NOT NULL
+          AND BTRIM(a.place_of_performance_state_code) <> ''
+        GROUP BY a.place_of_performance_state_code
+        ORDER BY name ASC
+      `),
+      db.query(`
+        SELECT
+          a.set_aside_code AS code,
+          COALESCE(MAX(a.set_aside_name), a.set_aside_code) AS name
+        FROM award_transactions a
+        WHERE a.set_aside_code IS NOT NULL
+          AND BTRIM(a.set_aside_code) <> ''
+        GROUP BY a.set_aside_code
+        ORDER BY name ASC
+      `),
+    ]);
+
+    res.json({
+      years: years.rows.map((row) => row.fiscalYear),
+      agencies: agencies.rows,
+      naics: naics.rows,
+      states: states.rows,
+      setAsideCodes: setAsides.rows,
+      competitionBuckets: [
+        { code: 'competed', name: 'Competed' },
+        { code: 'sole_source', name: 'Sole Source' },
+        { code: 'unknown', name: 'Unknown' },
+      ],
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/opportunity-heatmap', async (req, res, next) => {
+  try {
+    const limit = parseLimit(req.query.limit, { fallback: 36, max: 100 });
+    const values = [];
+    const parts = buildAwardFilters(req.query, { alias: 'a', values });
+    const conditions = [
+      `a.contracting_agency_code IS NOT NULL`,
+      `BTRIM(a.contracting_agency_code) <> ''`,
+      `a.naics_code IS NOT NULL`,
+      `BTRIM(a.naics_code) <> ''`,
+      ...parts.conditions,
+    ];
+    const where = `WHERE ${conditions.join(' AND ')}`;
+
+    const result = await db.query(
+      `WITH grouped AS (
+         SELECT
+           a.contracting_agency_code AS "agencyCode",
+           COALESCE(MAX(a.contracting_agency_name), a.contracting_agency_code) AS "agencyName",
+           a.naics_code AS "naicsCode",
+           COALESCE(MAX(n.description), MAX(a.naics_description), a.naics_code) AS "naicsName",
+           COUNT(*)::INT AS "awardCount",
+           SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+           ROUND(100.0 * COUNT(*) FILTER (WHERE ${competitionBucketExpr('a')} = 'competed') / NULLIF(COUNT(*), 0), 2) AS "competedSharePct",
+           ROUND(100.0 * COUNT(*) FILTER (WHERE ${competitionBucketExpr('a')} = 'sole_source') / NULLIF(COUNT(*), 0), 2) AS "soleSourceSharePct",
+           ROUND(100.0 * COUNT(*) FILTER (WHERE ${competitionBucketExpr('a')} = 'unknown') / NULLIF(COUNT(*), 0), 2) AS "unknownCompetitionSharePct"
+         FROM award_transactions a
+         LEFT JOIN naics_codes n ON n.code = a.naics_code
+         ${where}
+         GROUP BY a.contracting_agency_code, a.naics_code
+       ),
+       ranked_vendors AS (
+         SELECT
+           a.contracting_agency_code AS "agencyCode",
+           a.naics_code AS "naicsCode",
+           v.vendor_id AS "vendorId",
+           v.cage_code AS "cageCode",
+           v.uei,
+           v.vendor_name AS name,
+           SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+           ROW_NUMBER() OVER (
+             PARTITION BY a.contracting_agency_code, a.naics_code
+             ORDER BY SUM(COALESCE(a.award_amount, 0)) DESC, v.vendor_name ASC
+           ) AS rn
+         FROM award_transactions a
+         JOIN vendor_entities v ON v.vendor_id = a.vendor_id
+         ${where}
+         GROUP BY a.contracting_agency_code, a.naics_code, v.vendor_id, v.cage_code, v.uei, v.vendor_name
+       )
+       SELECT
+         g.*,
+         jsonb_build_object(
+           'vendorId', rv."vendorId",
+           'cageCode', rv."cageCode",
+           'uei', rv.uei,
+           'name', rv.name,
+           'totalObligated', rv."totalObligated"
+         ) AS "topVendor"
+       FROM grouped g
+       LEFT JOIN ranked_vendors rv
+         ON rv."agencyCode" = g."agencyCode"
+        AND rv."naicsCode" = g."naicsCode"
+        AND rv.rn = 1
+       ORDER BY g."totalObligated" DESC
+       LIMIT $${values.length + 1}`,
+      [...values, limit],
+    );
+
+    res.json({
+      data: result.rows,
+      cachedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/investment-scores', async (req, res, next) => {
   try {
-    const { year, state_code, naics_code, limit = '25' } = req.query;
+    const limit = parseLimit(req.query.limit, { fallback: 25, max: 50 });
+    const values = [];
+    const existence = buildVendorExistenceClause(req.query, { vendorAlias: 'v', values });
+    const conditions = [existence.clause];
 
-    const l = Math.min(50, Math.max(1, parseInt(limit, 10) || 25));
-    const conditions = [`s.cage_code IS NOT NULL`];
-    const values     = [];
-
-    if (year) {
-      values.push(parseInt(year, 10));
+    if (req.query.year) {
+      values.push(Number.parseInt(req.query.year, 10));
       conditions.push(`s.latest_fiscal_year = $${values.length}`);
     }
-    if (state_code) {
-      values.push(state_code.toUpperCase());
-      conditions.push(`v.state_code = $${values.length}`);
-    }
-    if (naics_code) {
-      values.push(naics_code);
-      conditions.push(`EXISTS (
-        SELECT 1 FROM award_transactions a
-        WHERE a.vendor_id = v.vendor_id AND a.naics_code = $${values.length}
-      )`);
+
+    if (req.query.min_obligated) {
+      values.push(Number.parseFloat(req.query.min_obligated) || 0);
+      conditions.push(`COALESCE(s.total_obligated_amount, 0) >= $${values.length}`);
     }
 
-    const where = `WHERE ${conditions.join(' AND ')}`;
-
-    const result = await db.query(`
-      WITH scored AS (
-        SELECT
-          s.cage_code,
-          s.uei,
-          s.company_name                                                      AS name,
-          v.state_code                                                        AS "stateCode",
-          s.latest_fiscal_year                                                AS "latestFiscalYear",
-          s.cached_at                                                         AS "cachedAt",
-          s.award_count                                                       AS "awardCount",
-          s.total_obligated_amount                                            AS "totalObligated",
-          s.yoy_growth_pct,
-          s.distinct_contracting_agencies,
-          ROUND(100.0 * s.award_count
-            / NULLIF(MAX(s.award_count) OVER (), 0), 2)                      AS "awardVelocity",
-          ROUND(LEAST(GREATEST(COALESCE(s.yoy_growth_pct, 0), 0), 100), 2)  AS "contractValueGrowth",
-          ROUND(100.0 * s.distinct_contracting_agencies
-            / NULLIF(MAX(s.distinct_contracting_agencies) OVER (), 0), 2)    AS "agencyDiversification",
-          ROUND(100.0 * s.total_obligated_amount
-            / NULLIF(MAX(s.total_obligated_amount) OVER (), 0), 2)           AS "setasideGraduation"
-        FROM vendor_investment_summary s
-        JOIN vendor_entities v ON v.cage_code = s.cage_code
-        ${where}
-      )
-      SELECT
-        ROW_NUMBER() OVER (ORDER BY
-          ("awardVelocity" + "contractValueGrowth" + "agencyDiversification" + "setasideGraduation") DESC
-        )                                                                     AS rank,
-        cage_code                                                             AS "cageCode",
-        uei,
-        name,
-        "stateCode",
-        "latestFiscalYear",
-        "cachedAt",
-        ROUND(("awardVelocity" + "contractValueGrowth" + "agencyDiversification" + "setasideGraduation") / 4, 2) AS "compositeScore",
-        JSON_BUILD_OBJECT(
-          'awardVelocity',        "awardVelocity",
-          'contractValueGrowth',  "contractValueGrowth",
-          'agencyDiversification',"agencyDiversification",
-          'setasideGraduation',   "setasideGraduation"
-        )                                                                     AS "scoreBreakdown",
-        "awardCount",
-        "totalObligated"
-      FROM scored
-      ORDER BY "compositeScore" DESC
-      LIMIT $${values.length + 1}
-    `, [...values, l]);
+    const result = await db.query(
+      `WITH active_years AS (
+         SELECT vendor_id, COUNT(*)::INT AS active_years
+         FROM vendor_year_metrics
+         GROUP BY vendor_id
+       ),
+       scored AS (
+         SELECT
+           s.vendor_id AS "vendorId",
+           s.cage_code AS "cageCode",
+           s.uei,
+           s.company_name AS name,
+           COALESCE(v.state_code, '') AS "stateCode",
+           s.latest_fiscal_year AS "latestFiscalYear",
+           s.cached_at AS "cachedAt",
+           COALESCE(s.award_count, 0) AS "awardCount",
+           COALESCE(s.total_obligated_amount, 0) AS "totalObligated",
+           COALESCE(ay.active_years, 0) AS "activeYears",
+           ROUND(LEAST(GREATEST(COALESCE(s.yoy_growth_pct, 0), 0), 200), 2) AS "growthScore",
+           ROUND(100.0 * COALESCE(s.distinct_contracting_agencies, 0) / NULLIF(MAX(COALESCE(s.distinct_contracting_agencies, 0)) OVER (), 0), 2) AS "agencyDiversification",
+           ROUND(100.0 * COALESCE(s.total_obligated_amount, 0) / NULLIF(MAX(COALESCE(s.total_obligated_amount, 0)) OVER (), 0), 2) AS "scaleScore",
+           ROUND(100.0 * COALESCE(ay.active_years, 0) / NULLIF(MAX(COALESCE(ay.active_years, 0)) OVER (), 0), 2) AS "durabilityScore"
+         FROM vendor_investment_summary s
+         JOIN vendor_entities v ON v.vendor_id = s.vendor_id
+         LEFT JOIN active_years ay ON ay.vendor_id = s.vendor_id
+         WHERE ${conditions.join(' AND ')}
+       )
+       SELECT
+         ROW_NUMBER() OVER (
+           ORDER BY ("growthScore" + "agencyDiversification" + "scaleScore" + "durabilityScore") DESC
+         ) AS rank,
+         *,
+         ROUND(("growthScore" + "agencyDiversification" + "scaleScore" + "durabilityScore") / 4.0, 2) AS "compositeScore",
+         json_build_object(
+           'growth', "growthScore",
+           'agencyDiversification', "agencyDiversification",
+           'scale', "scaleScore",
+           'durability', "durabilityScore"
+         ) AS "scoreBreakdown"
+       FROM scored
+       ORDER BY "compositeScore" DESC
+       LIMIT $${values.length + 1}`,
+      [...values, limit],
+    );
 
     res.json({
-      year: year ? parseInt(year, 10) : null,
       data: result.rows,
       cachedAt: result.rows[0]?.cachedAt ?? null,
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/analytics/emerging-winners
-// ---------------------------------------------------------------------------
 router.get('/emerging-winners', async (req, res, next) => {
   try {
-    const {
-      year, min_obligated = '0', state_code, naics_code,
-      limit = '25',
-    } = req.query;
+    const limit = parseLimit(req.query.limit, { fallback: 25, max: 50 });
+    const values = [];
+    const existence = buildVendorExistenceClause(req.query, { vendorAlias: 'v', values });
+    const conditions = [existence.clause];
 
-    const l            = Math.min(50, Math.max(1, parseInt(limit, 10) || 25));
-    const minObligated = parseFloat(min_obligated) || 0;
-    const conditions   = [`s.cage_code IS NOT NULL`];
-    const values       = [];
+    values.push(Number.parseFloat(req.query.min_obligated || '0') || 0);
+    conditions.push(`COALESCE(s.total_obligated_amount, 0) >= $${values.length}`);
+    conditions.push(`(s.previous_year_obligated_amount IS NULL OR COALESCE(s.yoy_growth_pct, 0) > 25)`);
 
-    if (year) {
-      values.push(parseInt(year, 10));
-      conditions.push(`s.latest_fiscal_year = $${values.length}`);
-    }
-    if (state_code) {
-      values.push(state_code.toUpperCase());
-      conditions.push(`v.state_code = $${values.length}`);
-    }
-    if (naics_code) {
-      values.push(naics_code);
-      conditions.push(`EXISTS (
-        SELECT 1 FROM award_transactions a
-        WHERE a.vendor_id = v.vendor_id AND a.naics_code = $${values.length}
-      )`);
-    }
-
-    values.push(minObligated);
-    conditions.push(`s.total_obligated_amount >= $${values.length}`);
-    conditions.push(`(s.previous_year_obligated_amount IS NULL OR s.yoy_growth_pct > 100)`);
-
-    const where = `WHERE ${conditions.join(' AND ')}`;
-
-    const result = await db.query(`
-      SELECT
-        s.cage_code                                             AS "cageCode",
-        s.uei,
-        s.company_name                                          AS name,
-        v.state_code                                            AS "stateCode",
-        s.first_award_date                                      AS "firstAwardDate",
-        s.award_count                                           AS "awardCount",
-        s.total_obligated_amount                                AS "totalObligated",
-        COALESCE(s.previous_year_obligated_amount, 0)           AS "prevYearObligated",
-        s.yoy_growth_pct                                        AS "growthPct",
-        (s.previous_year_obligated_amount IS NULL)              AS "isFirstEverAward",
-        s.cached_at                                             AS "cachedAt"
-      FROM vendor_investment_summary s
-      JOIN vendor_entities v ON v.cage_code = s.cage_code
-      ${where}
-      ORDER BY s.total_obligated_amount DESC
-      LIMIT $${values.length + 1}
-    `, [...values, l]);
+    const result = await db.query(
+      `WITH active_years AS (
+         SELECT vendor_id, COUNT(*)::INT AS active_years
+         FROM vendor_year_metrics
+         GROUP BY vendor_id
+       )
+       SELECT
+         s.vendor_id AS "vendorId",
+         s.cage_code AS "cageCode",
+         s.uei,
+         s.company_name AS name,
+         s.first_award_date AS "firstAwardDate",
+         COALESCE(ay.active_years, 0) AS "activeYears",
+         COALESCE(s.yoy_growth_pct, 0) AS "growthPct",
+         COALESCE(s.total_obligated_amount, 0) AS "totalObligated",
+         COALESCE(s.award_count, 0) AS "awardCount",
+         s.latest_fiscal_year AS "latestFiscalYear",
+         (s.previous_year_obligated_amount IS NULL OR s.previous_year_obligated_amount = 0) AS "isFirstEverAward",
+         s.cached_at AS "cachedAt"
+       FROM vendor_investment_summary s
+       JOIN vendor_entities v ON v.vendor_id = s.vendor_id
+       LEFT JOIN active_years ay ON ay.vendor_id = s.vendor_id
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY COALESCE(s.yoy_growth_pct, 999999) DESC NULLS LAST, COALESCE(s.total_obligated_amount, 0) DESC
+       LIMIT $${values.length + 1}`,
+      [...values, limit],
+    );
 
     res.json({
-      year: year ? parseInt(year, 10) : null,
       data: result.rows,
       cachedAt: result.rows[0]?.cachedAt ?? null,
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/analytics/risk-profile/:cage_code
-// ---------------------------------------------------------------------------
+router.get('/vendor-moat', async (req, res, next) => {
+  try {
+    const limit = parseLimit(req.query.limit, { fallback: 40, max: 80 });
+    const values = [];
+    const existence = buildVendorExistenceClause(req.query, { vendorAlias: 'v', values });
+
+    const result = await db.query(
+      `WITH active_years AS (
+         SELECT vendor_id, COUNT(*)::INT AS active_years
+         FROM vendor_year_metrics
+         GROUP BY vendor_id
+       ),
+       competition AS (
+         SELECT
+           a.vendor_id,
+           ROUND(100.0 * COUNT(*) FILTER (WHERE ${competitionBucketExpr('a')} = 'sole_source') / NULLIF(COUNT(*), 0), 2) AS "soleSourceSharePct",
+           COUNT(DISTINCT NULLIF(a.contracting_agency_code, ''))::INT AS "distinctAgencyCount"
+         FROM award_transactions a
+         GROUP BY a.vendor_id
+       )
+       SELECT
+         s.vendor_id AS "vendorId",
+         s.cage_code AS "cageCode",
+         s.uei,
+         s.company_name AS name,
+         COALESCE(ay.active_years, 0) AS "activeYears",
+         COALESCE(s.total_obligated_amount, 0) AS "totalObligated",
+         COALESCE(s.award_count, 0) AS "awardCount",
+         COALESCE(c."soleSourceSharePct", 0) AS "soleSourceSharePct",
+         COALESCE(c."distinctAgencyCount", 0) AS "distinctAgencyCount",
+         s.latest_fiscal_year AS "latestFiscalYear",
+         s.cached_at AS "cachedAt"
+       FROM vendor_investment_summary s
+       JOIN vendor_entities v ON v.vendor_id = s.vendor_id
+       LEFT JOIN active_years ay ON ay.vendor_id = s.vendor_id
+       LEFT JOIN competition c ON c.vendor_id = s.vendor_id
+       WHERE ${existence.clause}
+       ORDER BY COALESCE(ay.active_years, 0) DESC, COALESCE(s.total_obligated_amount, 0) DESC
+       LIMIT $${values.length + 1}`,
+      [...values, limit],
+    );
+
+    res.json({
+      data: result.rows,
+      cachedAt: result.rows[0]?.cachedAt ?? null,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/risk-profile/vendor/:vendorId', async (req, res, next) => {
+  try {
+    const profile = await buildRiskProfile(req.params.vendorId, req.query);
+    if (!profile) {
+      return res.status(404).json({ error: { status: 404, message: `Vendor ${req.params.vendorId} not found` } });
+    }
+
+    res.json(profile);
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/risk-profile/:cage_code', async (req, res, next) => {
   try {
-    const { cage_code } = req.params;
-
-    const vendorResult = await db.query(
-      `SELECT vendor_id, vendor_name FROM vendor_entities WHERE cage_code = $1`,
-      [cage_code.toUpperCase()]
-    );
-    if (!vendorResult.rows.length) {
-      return res.status(404).json({ error: { status: 404, message: `Vendor ${cage_code} not found` } });
+    const vendor = await findVendorByIdentifier(req.params.cage_code);
+    if (!vendor) {
+      return res.status(404).json({ error: { status: 404, message: `Vendor ${req.params.cage_code} not found` } });
     }
 
-    const { vendor_id, vendor_name } = vendorResult.rows[0];
-
-    const [agencyConc, contractTypes, modHealth, summary] = await Promise.all([
-      db.query(`
-        SELECT
-          contracting_agency_code                               AS "agencyCode",
-          contracting_agency_name                               AS "agencyName",
-          SUM(award_amount)                                     AS obligated,
-          ROUND(100.0 * SUM(award_amount)
-            / NULLIF(SUM(SUM(award_amount)) OVER (), 0), 2)    AS "pctOfTotal"
-        FROM award_transactions
-        WHERE vendor_id = $1
-        GROUP BY contracting_agency_code, contracting_agency_name
-        ORDER BY obligated DESC
-      `, [vendor_id]),
-
-      db.query(`
-        SELECT
-          award_type_description                                AS type,
-          COUNT(*)                                              AS count,
-          ROUND(100.0 * COUNT(*)
-            / NULLIF(SUM(COUNT(*)) OVER (), 0), 2)             AS pct
-        FROM award_transactions
-        WHERE vendor_id = $1 AND award_type_description IS NOT NULL
-        GROUP BY award_type_description
-        ORDER BY count DESC
-      `, [vendor_id]),
-
-      db.query(`
-        SELECT
-          COUNT(DISTINCT COALESCE(NULLIF(contract_id,''), NULLIF(piid,''), award_key)) AS "totalContracts",
-          COUNT(*) FILTER (WHERE modification_number IS NOT NULL
-            AND modification_number <> '0'
-            AND modification_number <> '')                      AS "totalModifications",
-          COUNT(*) FILTER (WHERE CAST(modification_number AS TEXT) ~ '^\d+$'
-            AND modification_number::INTEGER > 5)               AS "highModContracts"
-        FROM award_transactions
-        WHERE vendor_id = $1
-      `, [vendor_id]),
-
-      db.query(
-        `SELECT cached_at FROM vendor_investment_summary WHERE cage_code = $1`,
-        [cage_code.toUpperCase()]
-      ),
-    ]);
-
-    const mh = modHealth.rows[0];
-    const totalContracts      = parseInt(mh.totalContracts, 10);
-    const totalModifications  = parseInt(mh.totalModifications, 10);
-
-    res.json({
-      cageCode: cage_code.toUpperCase(),
-      name:     vendor_name,
-      agencyConcentration:    agencyConc.rows,
-      contractTypeBreakdown:  contractTypes.rows,
-      modificationHealth: {
-        totalContracts,
-        totalModifications,
-        avgModificationsPerContract: totalContracts
-          ? parseFloat((totalModifications / totalContracts).toFixed(2))
-          : 0,
-        highModContracts: parseInt(mh.highModContracts, 10),
-      },
-      cachedAt: summary.rows[0]?.cached_at ?? null,
-    });
-  } catch (err) {
-    next(err);
+    const profile = await buildRiskProfile(vendor.vendorId, req.query);
+    res.json(profile);
+  } catch (error) {
+    next(error);
   }
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/analytics/sector-heatmap
-// ---------------------------------------------------------------------------
 router.get('/sector-heatmap', async (req, res, next) => {
   try {
-    const { year, agency_code, limit = '20' } = req.query;
-    const l = Math.min(20, Math.max(1, parseInt(limit, 10) || 20));
-
-    const conditions = [`a.naics_code IS NOT NULL AND BTRIM(a.naics_code) <> ''`];
-    const values     = [];
-
-    if (year) {
-      values.push(parseInt(year, 10));
-      conditions.push(`COALESCE(a.award_fiscal_year, a.contract_fiscal_year) = $${values.length}`);
-    }
-    if (agency_code) {
-      values.push(agency_code);
-      conditions.push(`a.contracting_agency_code = $${values.length}`);
-    }
-
+    const limit = parseLimit(req.query.limit, { fallback: 20, max: 40 });
+    const values = [];
+    const parts = buildAwardFilters(req.query, { alias: 'a', values });
+    const conditions = [
+      `a.naics_code IS NOT NULL`,
+      `BTRIM(a.naics_code) <> ''`,
+      ...parts.conditions,
+    ];
     const where = `WHERE ${conditions.join(' AND ')}`;
 
-    const sectorsResult = await db.query(`
-      SELECT
-        a.naics_code                                            AS "naicsCode",
-        COALESCE(n.description, a.naics_description)           AS "naicsName",
-        COUNT(*)                                               AS "awardCount",
-        SUM(a.award_amount)                                    AS "totalObligated"
-      FROM award_transactions a
-      LEFT JOIN naics_codes n ON n.code = a.naics_code
-      ${where}
-      GROUP BY a.naics_code, "naicsName"
-      ORDER BY "totalObligated" DESC
-      LIMIT $${values.length + 1}
-    `, [...values, l]);
+    const result = await db.query(
+      `WITH sectors AS (
+         SELECT
+           a.naics_code AS "naicsCode",
+           COALESCE(MAX(n.description), MAX(a.naics_description), a.naics_code) AS "naicsName",
+           COUNT(*)::INT AS "awardCount",
+           SUM(COALESCE(a.award_amount, 0)) AS "totalObligated"
+         FROM award_transactions a
+         LEFT JOIN naics_codes n ON n.code = a.naics_code
+         ${where}
+         GROUP BY a.naics_code
+         ORDER BY "totalObligated" DESC
+         LIMIT $${values.length + 1}
+       ),
+       ranked_vendors AS (
+         SELECT
+           a.naics_code AS "naicsCode",
+           v.vendor_id AS "vendorId",
+           v.cage_code AS "cageCode",
+           v.uei,
+           v.vendor_name AS name,
+           SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+           ROUND(
+             100.0 * SUM(COALESCE(a.award_amount, 0))
+             / NULLIF(SUM(SUM(COALESCE(a.award_amount, 0))) OVER (PARTITION BY a.naics_code), 0),
+             2
+           ) AS "marketSharePct",
+           ROW_NUMBER() OVER (
+             PARTITION BY a.naics_code
+             ORDER BY SUM(COALESCE(a.award_amount, 0)) DESC, v.vendor_name ASC
+           ) AS rn
+         FROM award_transactions a
+         JOIN vendor_entities v ON v.vendor_id = a.vendor_id
+         ${where}
+         GROUP BY a.naics_code, v.vendor_id, v.cage_code, v.uei, v.vendor_name
+       )
+       SELECT
+         s.*,
+         COALESCE(
+           json_agg(
+             json_build_object(
+               'vendorId', rv."vendorId",
+               'cageCode', rv."cageCode",
+               'uei', rv.uei,
+               'name', rv.name,
+               'totalObligated', rv."totalObligated",
+               'marketSharePct', rv."marketSharePct"
+             )
+             ORDER BY rv."totalObligated" DESC
+           ) FILTER (WHERE rv.rn <= 5),
+           '[]'::json
+         ) AS "topVendors"
+       FROM sectors s
+       LEFT JOIN ranked_vendors rv ON rv."naicsCode" = s."naicsCode"
+       GROUP BY s."naicsCode", s."naicsName", s."awardCount", s."totalObligated"
+       ORDER BY s."totalObligated" DESC`,
+      [...values, limit],
+    );
 
-    const sectorCodes = sectorsResult.rows.map((r) => r.naicsCode);
-
-    const vendorConditions = [...conditions];
-    let nextParam = values.length + 1;
-    vendorConditions.push(`a.naics_code = ANY($${nextParam})`);
-    const vendorValues = [...values, sectorCodes];
-
-    const vendorsResult = await db.query(`
-      SELECT
-        a.naics_code                                            AS "naicsCode",
-        v.cage_code                                             AS "cageCode",
-        v.vendor_name                                           AS name,
-        SUM(a.award_amount)                                     AS "totalObligated",
-        ROUND(100.0 * SUM(a.award_amount)
-          / NULLIF(SUM(SUM(a.award_amount)) OVER (PARTITION BY a.naics_code), 0), 2) AS "marketSharePct",
-        ROW_NUMBER() OVER (PARTITION BY a.naics_code ORDER BY SUM(a.award_amount) DESC) AS rn
-      FROM award_transactions a
-      JOIN vendor_entities v ON v.vendor_id = a.vendor_id
-      WHERE ${vendorConditions.join(' AND ')}
-      GROUP BY a.naics_code, v.cage_code, v.vendor_name
-    `, vendorValues);
-
-    const vendorsBySector = {};
-    for (const row of vendorsResult.rows) {
-      if (row.rn <= 5) {
-        if (!vendorsBySector[row.naicsCode]) vendorsBySector[row.naicsCode] = [];
-        vendorsBySector[row.naicsCode].push({
-          cageCode:       row.cageCode,
-          name:           row.name,
-          totalObligated: row.totalObligated,
-          marketSharePct: row.marketSharePct,
-        });
-      }
-    }
-
-    const data = sectorsResult.rows.map((s) => ({
-      naicsCode:      s.naicsCode,
-      naicsName:      s.naicsName,
-      awardCount:     parseInt(s.awardCount, 10),
-      totalObligated: s.totalObligated,
-      topVendors:     vendorsBySector[s.naicsCode] || [],
-    }));
-
-    res.json({ year: year ? parseInt(year, 10) : null, data, cachedAt: new Date().toISOString() });
-  } catch (err) {
-    next(err);
+    res.json({ data: result.rows, cachedAt: new Date().toISOString() });
+  } catch (error) {
+    next(error);
   }
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/analytics/win-rate/:cage_code
-// ---------------------------------------------------------------------------
+router.get('/sole-source-opportunities', async (req, res, next) => {
+  try {
+    const groupBy = String(req.query.group_by || 'agency').toLowerCase();
+    const limit = parseLimit(req.query.limit, { fallback: 20, max: 50 });
+
+    const groupMap = {
+      agency: {
+        code: 'a.contracting_agency_code',
+        name: 'COALESCE(a.contracting_agency_name, a.contracting_agency_code)',
+        extraJoin: '',
+      },
+      naics: {
+        code: 'a.naics_code',
+        name: 'COALESCE(n.description, a.naics_description, a.naics_code)',
+        extraJoin: 'LEFT JOIN naics_codes n ON n.code = a.naics_code',
+      },
+      state: {
+        code: 'a.place_of_performance_state_code',
+        name: 'COALESCE(a.place_of_performance_state_name, a.place_of_performance_state_code)',
+        extraJoin: '',
+      },
+    };
+
+    const group = groupMap[groupBy] || groupMap.agency;
+    const values = [];
+    const parts = buildAwardFilters(req.query, { alias: 'a', values });
+    const conditions = [
+      `${group.code} IS NOT NULL`,
+      `BTRIM(${group.code}) <> ''`,
+      ...parts.conditions,
+    ];
+
+    const result = await db.query(
+      `SELECT
+         ${group.code} AS "groupCode",
+         ${group.name} AS "groupName",
+         SUM(COALESCE(a.award_amount, 0)) FILTER (WHERE ${competitionBucketExpr('a')} = 'sole_source') AS "soleSourceObligated",
+         COUNT(*) FILTER (WHERE ${competitionBucketExpr('a')} = 'sole_source')::INT AS "soleSourceAwardCount",
+         ROUND(100.0 * COUNT(*) FILTER (WHERE ${competitionBucketExpr('a')} = 'unknown') / NULLIF(COUNT(*), 0), 2) AS "unknownCompetitionSharePct"
+       FROM award_transactions a
+       ${group.extraJoin}
+       WHERE ${conditions.join(' AND ')}
+       GROUP BY ${group.code}, ${group.name}
+       HAVING COUNT(*) FILTER (WHERE ${competitionBucketExpr('a')} = 'sole_source') > 0
+       ORDER BY "soleSourceObligated" DESC NULLS LAST
+       LIMIT $${values.length + 1}`,
+      [...values, limit],
+    );
+
+    res.json({
+      groupBy,
+      data: result.rows,
+      cachedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/market-concentration', async (req, res, next) => {
+  try {
+    const groupBy = String(req.query.group_by || 'naics').toLowerCase();
+    const limit = parseLimit(req.query.limit, { fallback: 20, max: 50 });
+
+    const groupMap = {
+      naics: {
+        code: 'a.naics_code',
+        name: 'COALESCE(n.description, a.naics_description, a.naics_code)',
+        extraJoin: 'LEFT JOIN naics_codes n ON n.code = a.naics_code',
+      },
+      agency: {
+        code: 'a.contracting_agency_code',
+        name: 'COALESCE(a.contracting_agency_name, a.contracting_agency_code)',
+        extraJoin: '',
+      },
+    };
+
+    const group = groupMap[groupBy] || groupMap.naics;
+    const values = [];
+    const parts = buildAwardFilters(req.query, { alias: 'a', values });
+    const conditions = [
+      `${group.code} IS NOT NULL`,
+      `BTRIM(${group.code}) <> ''`,
+      ...parts.conditions,
+    ];
+
+    const result = await db.query(
+      `WITH vendor_totals AS (
+         SELECT
+           ${group.code} AS "groupCode",
+           ${group.name} AS "groupName",
+           v.vendor_id AS "vendorId",
+           v.vendor_name AS "vendorName",
+           SUM(COALESCE(a.award_amount, 0)) AS "vendorObligated"
+         FROM award_transactions a
+         JOIN vendor_entities v ON v.vendor_id = a.vendor_id
+         ${group.extraJoin}
+         WHERE ${conditions.join(' AND ')}
+         GROUP BY ${group.code}, ${group.name}, v.vendor_id, v.vendor_name
+       ),
+       ranked AS (
+         SELECT
+           *,
+           SUM("vendorObligated") OVER (PARTITION BY "groupCode") AS "groupTotal",
+           ROW_NUMBER() OVER (PARTITION BY "groupCode" ORDER BY "vendorObligated" DESC, "vendorName" ASC) AS rn
+         FROM vendor_totals
+       )
+       SELECT
+         "groupCode",
+         "groupName",
+         MAX("groupTotal") AS "totalObligated",
+         ROUND(100.0 * SUM("vendorObligated") FILTER (WHERE rn <= 5) / NULLIF(MAX("groupTotal"), 0), 2) AS "top5SharePct",
+         ROUND(100.0 * SUM("vendorObligated") FILTER (WHERE rn <= 10) / NULLIF(MAX("groupTotal"), 0), 2) AS "top10SharePct",
+         MAX("vendorName") FILTER (WHERE rn = 1) AS "dominantVendor"
+       FROM ranked
+       GROUP BY "groupCode", "groupName"
+       ORDER BY "totalObligated" DESC
+       LIMIT $${values.length + 1}`,
+      [...values, limit],
+    );
+
+    res.json({
+      groupBy,
+      data: result.rows,
+      cachedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/win-rate/:cage_code', async (req, res, next) => {
   try {
-    const { cage_code } = req.params;
-    const { year } = req.query;
-
-    const vendorResult = await db.query(
-      `SELECT vendor_id, vendor_name FROM vendor_entities WHERE cage_code = $1`,
-      [cage_code.toUpperCase()]
-    );
-    if (!vendorResult.rows.length) {
-      return res.status(404).json({ error: { status: 404, message: `Vendor ${cage_code} not found` } });
+    const vendor = await findVendorByIdentifier(req.params.cage_code);
+    if (!vendor) {
+      return res.status(404).json({ error: { status: 404, message: `Vendor ${req.params.cage_code} not found` } });
     }
 
-    const { vendor_id, vendor_name } = vendorResult.rows[0];
+    const values = [vendor.vendorId];
+    const parts = buildAwardFilters(req.query, { alias: 'a', values });
+    const where = `WHERE a.vendor_id = $1${parts.conditions.length ? ` AND ${parts.conditions.join(' AND ')}` : ''}`;
 
-    const conditions = [`vendor_id = $1`];
-    const values     = [vendor_id];
-
-    if (year) {
-      values.push(parseInt(year, 10));
-      conditions.push(`COALESCE(award_fiscal_year, contract_fiscal_year) = $${values.length}`);
-    }
-
-    const where = `WHERE ${conditions.join(' AND ')}`;
-
-    const [winRateResult, setasideResult, summaryResult] = await Promise.all([
-      db.query(`
-        SELECT
-          COUNT(*)                                                    AS "totalAwards",
-          COUNT(*) FILTER (WHERE extent_competed_code IN ('A','B','C','D','E','F')) AS "competedAwards",
-          COUNT(*) FILTER (WHERE extent_competed_code IN ('G','H','CDO'))           AS "soleSourceAwards",
-          ROUND(AVG(
-            CASE WHEN (extra_attributes->>'number_of_offers_received') ~ '^\d+$'
-              THEN (extra_attributes->>'number_of_offers_received')::NUMERIC
-            END
-          ), 2)                                                       AS "avgOffersReceived"
-        FROM award_transactions
-        ${where}
-      `, values),
-
-      db.query(`
-        SELECT
-          COALESCE(award_fiscal_year, contract_fiscal_year)           AS "fiscalYear",
-          set_aside_code                                              AS type,
-          set_aside_name                                              AS label
-        FROM award_transactions
-        WHERE vendor_id = $1
-          AND set_aside_code IS NOT NULL AND BTRIM(set_aside_code) <> ''
-        GROUP BY "fiscalYear", set_aside_code, set_aside_name
-        ORDER BY "fiscalYear" ASC
-      `, [vendor_id]),
-
+    const [winRateResult, setasideHistory] = await Promise.all([
       db.query(
-        `SELECT cached_at FROM vendor_investment_summary WHERE cage_code = $1`,
-        [cage_code.toUpperCase()]
+        `SELECT
+           COUNT(*)::INT AS "totalAwards",
+           COUNT(*) FILTER (WHERE ${competitionBucketExpr('a')} = 'competed')::INT AS "competedAwards",
+           COUNT(*) FILTER (WHERE ${competitionBucketExpr('a')} = 'sole_source')::INT AS "soleSourceAwards",
+           ROUND(AVG(a.number_of_offers_received), 2) AS "avgOffersReceived"
+         FROM award_transactions a
+         ${where}`,
+        values,
+      ),
+      db.query(
+        `SELECT
+           ${fiscalYearExpr('a')} AS "fiscalYear",
+           a.set_aside_code AS type,
+           COALESCE(MAX(a.set_aside_name), a.set_aside_code) AS label
+         FROM award_transactions a
+         ${where}
+         AND a.set_aside_code IS NOT NULL
+         AND BTRIM(a.set_aside_code) <> ''
+         GROUP BY ${fiscalYearExpr('a')}, a.set_aside_code
+         ORDER BY "fiscalYear" ASC, type ASC`,
+        values,
       ),
     ]);
 
-    const wr = winRateResult.rows[0];
-    const totalAwards    = parseInt(wr.totalAwards, 10);
-    const competedAwards = parseInt(wr.competedAwards, 10);
-
-    const history = setasideResult.rows;
-    const hadSetAside    = history.some((r) => r.type && r.type !== 'NONE');
-    const latestSetAside = history[history.length - 1]?.type;
-    const graduated      = hadSetAside && (latestSetAside === 'NONE' || latestSetAside === 'NO SET ASIDE USED');
+    const row = winRateResult.rows[0] || {};
+    const totalAwards = Number(row.totalAwards || 0);
+    const competedAwards = Number(row.competedAwards || 0);
+    const soleSourceAwards = Number(row.soleSourceAwards || 0);
+    const history = setasideHistory.rows;
+    const graduatedFromSetaside = history.some((entry) => entry.type && entry.type !== 'NONE')
+      && ['NONE', 'NO SET ASIDE USED'].includes(history[history.length - 1]?.type);
 
     res.json({
-      cageCode:              cage_code.toUpperCase(),
-      name:                  vendor_name,
-      year:                  year ? parseInt(year, 10) : null,
+      vendorId: vendor.vendorId,
+      cageCode: vendor.cageCode,
+      uei: vendor.uei,
+      name: vendor.name,
       totalAwards,
       competedAwards,
-      soleSourceAwards:      parseInt(wr.soleSourceAwards, 10),
-      competitiveWinRatePct: totalAwards
-        ? parseFloat(((competedAwards / totalAwards) * 100).toFixed(2))
-        : 0,
-      avgOffersReceived:     wr.avgOffersReceived,
-      setasideHistory:       history,
-      graduatedFromSetaside: graduated,
-      cachedAt:              summaryResult.rows[0]?.cached_at ?? null,
+      soleSourceAwards,
+      competitiveWinRatePct: totalAwards ? Number(((competedAwards / totalAwards) * 100).toFixed(2)) : 0,
+      avgOffersReceived: row.avgOffersReceived ? Number(row.avgOffersReceived) : null,
+      setasideHistory: history,
+      graduatedFromSetaside,
     });
-  } catch (err) {
-    next(err);
+  } catch (error) {
+    next(error);
   }
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/analytics/geographic-clustering
-// ---------------------------------------------------------------------------
 router.get('/geographic-clustering', async (req, res, next) => {
   try {
-    const { year, state_code, naics_code, limit = '5' } = req.query;
-    const vendorsPerRegion = Math.min(10, Math.max(1, parseInt(limit, 10) || 5));
-
+    const vendorsPerState = parseLimit(req.query.limit, { fallback: 5, max: 12 });
+    const values = [];
+    const parts = buildAwardFilters(req.query, { alias: 'a', values });
     const conditions = [
       `a.place_of_performance_state_code IS NOT NULL`,
       `BTRIM(a.place_of_performance_state_code) <> ''`,
+      ...parts.conditions,
     ];
-    const values = [];
-
-    if (year) {
-      values.push(parseInt(year, 10));
-      conditions.push(`COALESCE(a.award_fiscal_year, a.contract_fiscal_year) = $${values.length}`);
-    }
-    if (state_code) {
-      values.push(state_code.toUpperCase());
-      conditions.push(`a.place_of_performance_state_code = $${values.length}`);
-    }
-    if (naics_code) {
-      values.push(naics_code);
-      conditions.push(`a.naics_code = $${values.length}`);
-    }
-
     const where = `WHERE ${conditions.join(' AND ')}`;
 
-    const statesResult = await db.query(`
-      SELECT
-        a.place_of_performance_state_code                     AS "stateCode",
-        MAX(a.place_of_performance_state_name)                AS "stateName",
-        COUNT(*)                                              AS "awardCount",
-        SUM(a.award_amount)                                   AS "totalObligated",
-        ROUND(100.0 * SUM(a.award_amount)
-          / NULLIF(SUM(SUM(a.award_amount)) OVER (), 0), 2)  AS "pctOfNationalTotal"
-      FROM award_transactions a
-      ${where}
-      GROUP BY a.place_of_performance_state_code
-      ORDER BY "totalObligated" DESC
-    `, values);
+    const result = await db.query(
+      `WITH states AS (
+         SELECT
+           a.place_of_performance_state_code AS "stateCode",
+           COALESCE(MAX(a.place_of_performance_state_name), a.place_of_performance_state_code) AS "stateName",
+           COUNT(*)::INT AS "awardCount",
+           SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+           ROUND(100.0 * SUM(COALESCE(a.award_amount, 0)) / NULLIF(SUM(SUM(COALESCE(a.award_amount, 0))) OVER (), 0), 2) AS "pctOfNationalTotal"
+         FROM award_transactions a
+         ${where}
+         GROUP BY a.place_of_performance_state_code
+       ),
+       ranked_vendors AS (
+         SELECT
+           a.place_of_performance_state_code AS "stateCode",
+           v.vendor_id AS "vendorId",
+           v.cage_code AS "cageCode",
+           v.uei,
+           v.vendor_name AS name,
+           SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+           ROUND(
+             100.0 * SUM(COALESCE(a.award_amount, 0))
+             / NULLIF(SUM(SUM(COALESCE(a.award_amount, 0))) OVER (PARTITION BY a.place_of_performance_state_code), 0),
+             2
+           ) AS "regionalMarketSharePct",
+           ROW_NUMBER() OVER (
+             PARTITION BY a.place_of_performance_state_code
+             ORDER BY SUM(COALESCE(a.award_amount, 0)) DESC, v.vendor_name ASC
+           ) AS rn
+         FROM award_transactions a
+         JOIN vendor_entities v ON v.vendor_id = a.vendor_id
+         ${where}
+         GROUP BY a.place_of_performance_state_code, v.vendor_id, v.cage_code, v.uei, v.vendor_name
+       )
+       SELECT
+         s.*,
+         COALESCE(
+           json_agg(
+             json_build_object(
+               'vendorId', rv."vendorId",
+               'cageCode', rv."cageCode",
+               'uei', rv.uei,
+               'name', rv.name,
+               'totalObligated', rv."totalObligated",
+               'regionalMarketSharePct', rv."regionalMarketSharePct"
+             )
+             ORDER BY rv."totalObligated" DESC
+           ) FILTER (WHERE rv.rn <= $${values.length + 1}),
+           '[]'::json
+         ) AS "topVendors"
+       FROM states s
+       LEFT JOIN ranked_vendors rv ON rv."stateCode" = s."stateCode"
+       GROUP BY s."stateCode", s."stateName", s."awardCount", s."totalObligated", s."pctOfNationalTotal"
+       ORDER BY s."totalObligated" DESC`,
+      [...values, vendorsPerState],
+    );
 
-    if (!statesResult.rows.length) {
-      return res.json({ year: year ? parseInt(year, 10) : null, data: [], cachedAt: new Date().toISOString() });
+    res.json({ data: result.rows, cachedAt: new Date().toISOString() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/naics-trends', async (req, res, next) => {
+  try {
+    const topN = parseLimit(req.query.top_n, { fallback: 5, max: 10 });
+    const values = [];
+    const parts = buildAwardFilters(req.query, { alias: 'a', values });
+    const conditions = [
+      `a.naics_code IS NOT NULL`,
+      `BTRIM(a.naics_code) <> ''`,
+      ...parts.conditions,
+    ];
+
+    const result = await db.query(
+      `WITH base AS (
+         SELECT
+           ${fiscalYearExpr('a')} AS "fiscalYear",
+           a.naics_code AS "naicsCode",
+           COALESCE(MAX(n.description), MAX(a.naics_description), a.naics_code) AS "naicsName",
+           SUM(COALESCE(a.award_amount, 0)) AS "totalObligated",
+           COUNT(*)::INT AS "awardCount"
+         FROM award_transactions a
+         LEFT JOIN naics_codes n ON n.code = a.naics_code
+         WHERE ${conditions.join(' AND ')}
+         GROUP BY ${fiscalYearExpr('a')}, a.naics_code
+       ),
+       top_sectors AS (
+         SELECT "naicsCode"
+         FROM base
+         GROUP BY "naicsCode"
+         ORDER BY SUM("totalObligated") DESC
+         LIMIT $${values.length + 1}
+       )
+       SELECT b.*
+       FROM base b
+       JOIN top_sectors ts ON ts."naicsCode" = b."naicsCode"
+       ORDER BY b."fiscalYear" ASC, b."totalObligated" DESC`,
+      [...values, topN],
+    );
+
+    res.json({ data: result.rows, cachedAt: new Date().toISOString() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/repeat-winners', async (req, res, next) => {
+  try {
+    const values = [];
+    const parts = buildAwardFilters(req.query, { alias: 'a', values });
+    const conditions = parts.conditions.length ? `WHERE ${parts.conditions.join(' AND ')}` : '';
+
+    const result = await db.query(
+      `WITH vendor_years AS (
+         SELECT
+           a.vendor_id,
+           ${fiscalYearExpr('a')} AS fiscal_year,
+           SUM(COALESCE(a.award_amount, 0)) AS obligated
+         FROM award_transactions a
+         ${conditions}
+         GROUP BY a.vendor_id, ${fiscalYearExpr('a')}
+       ),
+       vendor_buckets AS (
+         SELECT
+           vendor_id,
+           COUNT(*)::INT AS active_years,
+           SUM(obligated) AS total_obligated
+         FROM vendor_years
+         GROUP BY vendor_id
+       )
+       SELECT
+         bucket,
+         MIN(bucket_order) AS "bucketOrder",
+         COUNT(*)::INT AS "vendorCount",
+         SUM(total_obligated) AS "totalObligated"
+       FROM (
+         SELECT
+           CASE
+             WHEN active_years = 1 THEN '1 year'
+             WHEN active_years = 2 THEN '2 years'
+             WHEN active_years BETWEEN 3 AND 4 THEN '3-4 years'
+             WHEN active_years BETWEEN 5 AND 9 THEN '5-9 years'
+             ELSE '10+ years'
+           END AS bucket,
+           CASE
+             WHEN active_years = 1 THEN 1
+             WHEN active_years = 2 THEN 2
+             WHEN active_years BETWEEN 3 AND 4 THEN 3
+             WHEN active_years BETWEEN 5 AND 9 THEN 4
+             ELSE 5
+           END AS bucket_order,
+           total_obligated
+         FROM vendor_buckets
+       ) bucketed
+       GROUP BY bucket
+       ORDER BY "bucketOrder" ASC`,
+      values,
+    );
+
+    res.json({ data: result.rows, cachedAt: new Date().toISOString() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/revenue-stability/vendor/:vendorId', async (req, res, next) => {
+  try {
+    const vendor = await findVendorByIdentifier(req.params.vendorId);
+    if (!vendor) {
+      return res.status(404).json({ error: { status: 404, message: `Vendor ${req.params.vendorId} not found` } });
     }
 
-    const stateCodes = statesResult.rows.map((r) => r.stateCode);
+    const values = [vendor.vendorId];
+    const parts = buildAwardFilters(req.query, { alias: 'a', values });
+    const where = `WHERE a.vendor_id = $1${parts.conditions.length ? ` AND ${parts.conditions.join(' AND ')}` : ''}`;
 
-    const vendorConditions = [...conditions, `a.place_of_performance_state_code = ANY($${values.length + 1})`];
-    const vendorsResult = await db.query(`
-      SELECT
-        a.place_of_performance_state_code                     AS "stateCode",
-        v.cage_code                                           AS "cageCode",
-        v.vendor_name                                         AS name,
-        SUM(a.award_amount)                                   AS "totalObligated",
-        ROUND(100.0 * SUM(a.award_amount)
-          / NULLIF(SUM(SUM(a.award_amount)) OVER (
-            PARTITION BY a.place_of_performance_state_code
-          ), 0), 2)                                           AS "regionalMarketSharePct",
-        ROW_NUMBER() OVER (
-          PARTITION BY a.place_of_performance_state_code
-          ORDER BY SUM(a.award_amount) DESC
-        )                                                     AS rn
-      FROM award_transactions a
-      JOIN vendor_entities v ON v.vendor_id = a.vendor_id
-      WHERE ${vendorConditions.join(' AND ')}
-      GROUP BY a.place_of_performance_state_code, v.cage_code, v.vendor_name
-    `, [...values, stateCodes]);
+    const result = await db.query(
+      `WITH base AS (
+         SELECT
+           ${fiscalYearExpr('a')} AS "fiscalYear",
+           COALESCE(NULLIF(a.award_type_description, ''), 'Unknown') AS award_type,
+           SUM(COALESCE(a.award_amount, 0)) AS obligated
+         FROM award_transactions a
+         ${where}
+         GROUP BY ${fiscalYearExpr('a')}, COALESCE(NULLIF(a.award_type_description, ''), 'Unknown')
+       ),
+       top_types AS (
+         SELECT award_type
+         FROM base
+         GROUP BY award_type
+         ORDER BY SUM(obligated) DESC
+         LIMIT 6
+       )
+       SELECT
+         "fiscalYear",
+         CASE WHEN award_type IN (SELECT award_type FROM top_types) THEN award_type ELSE 'Other' END AS "awardType",
+         SUM(obligated) AS "totalObligated"
+       FROM base
+       GROUP BY "fiscalYear", CASE WHEN award_type IN (SELECT award_type FROM top_types) THEN award_type ELSE 'Other' END
+       ORDER BY "fiscalYear" ASC, "totalObligated" DESC`,
+      values,
+    );
 
-    const vendorsByState = {};
-    for (const row of vendorsResult.rows) {
-      if (row.rn <= vendorsPerRegion) {
-        if (!vendorsByState[row.stateCode]) vendorsByState[row.stateCode] = [];
-        vendorsByState[row.stateCode].push({
-          cageCode:               row.cageCode,
-          name:                   row.name,
-          totalObligated:         row.totalObligated,
-          regionalMarketSharePct: row.regionalMarketSharePct,
-        });
-      }
-    }
-
-    const data = statesResult.rows.map((s) => ({
-      stateCode:          s.stateCode,
-      stateName:          s.stateName,
-      awardCount:         parseInt(s.awardCount, 10),
-      totalObligated:     s.totalObligated,
-      pctOfNationalTotal: s.pctOfNationalTotal,
-      topVendors:         vendorsByState[s.stateCode] || [],
-    }));
-
-    res.json({ year: year ? parseInt(year, 10) : null, data, cachedAt: new Date().toISOString() });
-  } catch (err) {
-    next(err);
+    res.json({
+      vendorId: vendor.vendorId,
+      cageCode: vendor.cageCode,
+      uei: vendor.uei,
+      name: vendor.name,
+      data: result.rows,
+    });
+  } catch (error) {
+    next(error);
   }
 });
 
