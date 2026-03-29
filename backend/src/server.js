@@ -10,9 +10,9 @@ const vendorsRouter    = require('./routes/vendors');
 const awardsRouter     = require('./routes/awards');
 const agenciesRouter   = require('./routes/agencies');
 const naicsRouter      = require('./routes/naics');
-const uploadRouter     = require('./routes/upload');
 
-const analyticsRouter = require('./routes/analytics');
+const analyticsRouter  = require('./routes/analytics');
+const dashboardRouter  = require('./routes/dashboard');
 
 const app  = express();
 const PORT = process.env.PORT || 4000;
@@ -74,12 +74,16 @@ app.use('/api/vendors',   vendorsRouter);
 app.use('/api/awards',    awardsRouter);
 app.use('/api/agencies',  agenciesRouter);
 app.use('/api/naics',     naicsRouter);
-app.use('/api/upload',    uploadRouter);
 
 // ---------------------------------------------------------------------------
 // Analytics routes
 // ---------------------------------------------------------------------------
 app.use('/api/analytics', analyticsRouter);
+
+// ---------------------------------------------------------------------------
+// Dashboard routes
+// ---------------------------------------------------------------------------
+app.use('/api/dashboard', dashboardRouter);
 
 // ---------------------------------------------------------------------------
 // 404 handler
