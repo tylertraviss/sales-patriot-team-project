@@ -61,9 +61,15 @@ router.get('/', async (req, res, next) => {
 });
 
 // GET /api/naics/graph — vendor-sector network for the Graph page
-router.get('/graph', async (_req, res, next) => {
+// Query params:
+//   ?sectors=N           — how many NAICS sectors to include (default 20)
+//   ?vendors_per_sector=N — top vendors per sector (default 10)
+router.get('/graph', async (req, res, next) => {
   try {
-    // Top NAICS sectors by award count (limit to keep graph manageable)
+    const numSectors       = Math.max(1, parseInt(req.query.sectors            ?? '20', 10) || 20);
+    const vpsRaw           = parseInt(req.query.vendors_per_sector ?? '10', 10);
+    const vendorsPerSector = isNaN(vpsRaw) || vpsRaw <= 0 ? 0 : vpsRaw; // 0 = unlimited
+
     const sectorsResult = await db.query(`
       SELECT
         a.naics_code                                          AS code,
@@ -75,15 +81,14 @@ router.get('/graph', async (_req, res, next) => {
       WHERE a.naics_code IS NOT NULL AND BTRIM(a.naics_code) <> ''
       GROUP BY a.naics_code, COALESCE(n.description, a.naics_description, a.naics_code)
       ORDER BY "vendorCount" DESC
-      LIMIT 20
-    `);
+      LIMIT $1
+    `, [numSectors]);
 
     const sectorCodes = sectorsResult.rows.map((r) => r.code);
     if (!sectorCodes.length) {
       return res.json({ nodes: [], links: [], sectors: [] });
     }
 
-    // Top vendors per sector (cap at 10 per sector to keep graph size reasonable)
     const vendorsResult = await db.query(`
       SELECT
         v.cage_code,
@@ -119,9 +124,9 @@ router.get('/graph', async (_req, res, next) => {
       });
     }
 
-    // Vendor nodes + edges (top 10 per sector only)
+    // Vendor nodes + edges — filter to requested depth (0 = unlimited)
     for (const row of vendorsResult.rows) {
-      if (row.rn > 10) continue;
+      if (vendorsPerSector > 0 && row.rn > vendorsPerSector) continue;
 
       const vendorId = `vendor_${row.cage_code || row.uei}`;
 

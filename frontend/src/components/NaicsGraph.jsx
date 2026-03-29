@@ -14,9 +14,29 @@ const COLORS = {
   bg:       '#080d1a',
 };
 
-// NAICS sector hub: fixed size. Vendor: small uniform circle, color only.
-const NAICS_R  = 18;
-const VENDOR_R = 5;   // small and uniform — color does the work, not size
+// Vendor: small uniform circle — color does the work, not size.
+// NAICS hub: radius scales with how many vendors are linked to it in the current graph.
+const NAICS_R_MIN = 12;
+const NAICS_R_MAX = 42;
+const VENDOR_R    = 5;
+
+// Pre-compute per-node vendor counts from graphData links
+function buildHubVendorCounts(graphData) {
+  const counts = {};
+  for (const link of graphData?.links ?? []) {
+    const src = typeof link.source === 'object' ? link.source.id : link.source;
+    const tgt = typeof link.target === 'object' ? link.target.id : link.target;
+    if (src?.startsWith('naics_')) counts[src] = (counts[src] ?? 0) + 1;
+    if (tgt?.startsWith('naics_')) counts[tgt] = (counts[tgt] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function hubRadius(vendorCount, maxVendorCount) {
+  if (!maxVendorCount) return NAICS_R_MIN;
+  const t = Math.log1p(vendorCount) / Math.log1p(maxVendorCount);
+  return NAICS_R_MIN + t * (NAICS_R_MAX - NAICS_R_MIN);
+}
 
 const fmt = new Intl.NumberFormat('en-US', {
   style: 'currency', currency: 'USD',
@@ -96,6 +116,10 @@ export default function NaicsGraph({ graphData, selectedSector, onVendorClick })
   const [hovered,  setHovered]  = useState(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
+  // Hub vendor counts + max — recomputed whenever graphData changes
+  const hubCounts    = buildHubVendorCounts(graphData);
+  const maxHubCount  = Math.max(...Object.values(hubCounts), 1);
+
   // Responsive resize
   useEffect(() => {
     const el = containerRef.current;
@@ -135,13 +159,17 @@ export default function NaicsGraph({ graphData, selectedSector, onVendorClick })
       return 60;
     });
     fg.d3Force('collision') && fg.d3Force('collision').radius((n) =>
-      n.type === 'naics' ? NAICS_R + 20 : VENDOR_R + 8
+      n.type === 'naics'
+        ? hubRadius(hubCounts[n.id] ?? 0, maxHubCount) + 20
+        : VENDOR_R + 8
     );
     fg.d3ReheatSimulation();
   }, [graphData]);
 
   const paintNode = useCallback((node, ctx, globalScale) => {
-    const r         = node.type === 'naics' ? NAICS_R : VENDOR_R;
+    const r         = node.type === 'naics'
+      ? hubRadius(hubCounts[node.id] ?? 0, maxHubCount)
+      : VENDOR_R;
     const isHovered = hovered?.id === node.id;
     const color     = nodeColor(node);
 
@@ -205,7 +233,7 @@ export default function NaicsGraph({ graphData, selectedSector, onVendorClick })
 
     ctx.fillStyle = isSector ? COLORS.naics : '#e2e8f0';
     ctx.fillText(rawLabel, textX, textY);
-  }, [hovered]);
+  }, [hovered, hubCounts, maxHubCount]);
 
   const handleNodeHover = useCallback((node) => {
     setHovered(node ?? null);
@@ -214,8 +242,10 @@ export default function NaicsGraph({ graphData, selectedSector, onVendorClick })
   }, []);
 
   const handleNodeClick = useCallback((node) => {
-    if (node?.type === 'vendor' && node.cageCode && onVendorClick)
-      onVendorClick({ cageCode: node.cageCode, vendorName: node.label });
+    if (node?.type === 'vendor' && onVendorClick) {
+      const id = node.cageCode ?? node.uei;
+      if (id) onVendorClick({ cageCode: id, vendorName: node.label });
+    }
   }, [onVendorClick]);
 
   if (!graphData?.nodes?.length) return (
@@ -235,7 +265,10 @@ export default function NaicsGraph({ graphData, selectedSector, onVendorClick })
         // Nodes
         nodeCanvasObject={paintNode}
         nodeCanvasObjectMode={() => 'replace'}
-        nodeVal={(n) => (n.type === 'naics' ? NAICS_R ** 2 : VENDOR_R ** 2)}
+        nodeVal={(n) => n.type === 'naics'
+          ? hubRadius(hubCounts[n.id] ?? 0, maxHubCount) ** 2
+          : VENDOR_R ** 2
+        }
         // Links — thin, subtle
         linkColor={() => COLORS.link}
         linkWidth={0.8}
