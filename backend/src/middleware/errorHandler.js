@@ -1,3 +1,5 @@
+const logger = require('../logger');
+
 /**
  * Central Express error handler.
  * Must be registered as the LAST middleware in server.js.
@@ -7,8 +9,18 @@ function errorHandler(err, req, res, next) {
   const status = err.status || err.statusCode || 500;
   const message = err.message || 'Internal Server Error';
 
+  const meta = {
+    requestId:  req.id,
+    method:     req.method,
+    url:        req.originalUrl,
+    statusCode: status,
+    errorCode:  err.code,
+  };
+
   if (status >= 500) {
-    console.error(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`, err);
+    logger.error(message, { ...meta, stack: err.stack });
+  } else {
+    logger.warn(message, meta);
   }
 
   // Multer file-size error

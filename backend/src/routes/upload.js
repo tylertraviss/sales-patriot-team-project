@@ -4,6 +4,7 @@ const csv      = require('csv-parser');
 const stream   = require('stream');
 const router   = express.Router();
 const db       = require('../db/connection');
+const logger   = require('../logger');
 
 // Store uploaded files in memory as a buffer (streaming immediately to DB).
 // For very large files the team may switch to disk storage via multer.diskStorage.
@@ -41,6 +42,13 @@ router.post('/', upload.single('file'), async (req, res, next) => {
     return res.status(400).json({ error: 'No file uploaded. Include a CSV as form-data field "file".' });
   }
 
+  logger.info('upload started', {
+    requestId: req.id,
+    filename:  req.file.originalname,
+    sizeBytes: req.file.size,
+  });
+
+  const uploadStart = Date.now();
   const client = await db.getClient();
 
   try {
@@ -68,6 +76,10 @@ router.post('/', upload.single('file'), async (req, res, next) => {
         skipped++;
         errors.push({ row: raw, reason: 'Missing CAGE code' });
         continue;
+      }
+
+      if (!row.cage_code) {
+        logger.debug('row skipped: missing CAGE code', { requestId: req.id, row: raw });
       }
 
       try {
@@ -99,20 +111,36 @@ router.post('/', upload.single('file'), async (req, res, next) => {
       } catch (rowErr) {
         skipped++;
         errors.push({ row: raw, reason: rowErr.message });
+        logger.warn('row insert failed', { requestId: req.id, reason: rowErr.message, cageCode: row.cage_code });
       }
     }
 
     await client.query('COMMIT');
+
+    const duration = Date.now() - uploadStart;
+    logger.info('upload complete', {
+      requestId:  req.id,
+      filename:   req.file.originalname,
+      total:      rows.length,
+      inserted,
+      skipped,
+      durationMs: duration,
+    });
 
     res.json({
       message:  'Upload complete',
       inserted,
       skipped,
       total:    rows.length,
-      errors:   errors.slice(0, 50), // cap error list in response
+      errors:   errors.slice(0, 50),
     });
   } catch (err) {
     await client.query('ROLLBACK');
+    logger.error('upload failed, transaction rolled back', {
+      requestId: req.id,
+      filename:  req.file?.originalname,
+      error:     err.message,
+    });
     next(err);
   } finally {
     client.release();

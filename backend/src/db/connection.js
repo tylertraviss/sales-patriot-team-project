@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const logger = require('../logger');
 
 const pool = new Pool({
   host:     process.env.DB_HOST     || 'localhost',
@@ -11,9 +12,9 @@ const pool = new Pool({
   connectionTimeoutMillis: 5000,
 });
 
-pool.on('error', (err) => {
-  console.error('Unexpected PostgreSQL pool error:', err);
-});
+pool.on('connect', () => logger.debug('pg pool: new client connected'));
+pool.on('remove',  () => logger.debug('pg pool: client removed'));
+pool.on('error',   (err) => logger.error('pg pool: unexpected error', { stack: err.stack }));
 
 /**
  * Runs a parameterised query and returns the result rows.
@@ -24,8 +25,9 @@ async function query(text, params) {
   const start = Date.now();
   const res = await pool.query(text, params);
   const duration = Date.now() - start;
-  if (process.env.NODE_ENV !== 'production') {
-    console.debug('query', { text, duration, rows: res.rowCount });
+  logger.debug('db query', { duration_ms: duration, rows: res.rowCount, query: text.replace(/\s+/g, ' ').trim() });
+  if (duration > 2000) {
+    logger.warn('slow query detected', { duration_ms: duration, query: text.replace(/\s+/g, ' ').trim() });
   }
   return res;
 }
