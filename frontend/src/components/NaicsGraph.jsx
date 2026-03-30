@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import ForceGraph2D from 'react-force-graph-2d';
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // ── Visual constants ──────────────────────────────────────────────────────────
@@ -112,25 +112,46 @@ function Tooltip({ node, pos }) {
 export default function NaicsGraph({ graphData, selectedSector, onVendorClick }) {
   const fgRef        = useRef();
   const containerRef = useRef();
-  const [size,     setSize]     = useState({ w: 900, h: 680 });
-  const [hovered,  setHovered]  = useState(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [size,         setSize]         = useState({ w: 900, h: 680 });
+  const [hovered,      setHovered]      = useState(null);
+  const [mousePos,     setMousePos]     = useState({ x: 0, y: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Hub vendor counts + max — recomputed whenever graphData changes
   const hubCounts    = buildHubVendorCounts(graphData);
   const maxHubCount  = Math.max(...Object.values(hubCounts), 1);
 
-  // Responsive resize
+  // Responsive resize — in fullscreen use full window dimensions
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() =>
-      setSize({ w: el.offsetWidth, h: Math.max(600, el.offsetWidth * 0.65) })
-    );
+    const update = () => {
+      if (document.fullscreenElement === el) {
+        setSize({ w: window.innerWidth, h: window.innerHeight });
+      } else {
+        setSize({ w: el.offsetWidth, h: Math.max(600, el.offsetWidth * 0.65) });
+      }
+    };
+    const ro = new ResizeObserver(update);
     ro.observe(el);
-    setSize({ w: el.offsetWidth, h: Math.max(600, el.offsetWidth * 0.65) });
+    update();
     return () => ro.disconnect();
   }, []);
+
+  // Track fullscreen state via DOM event so Esc key also updates the button
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
 
   // Mouse tracking for tooltip
   useEffect(() => {
@@ -284,16 +305,16 @@ export default function NaicsGraph({ graphData, selectedSector, onVendorClick })
         onNodeClick={handleNodeClick}
         enableNodeDrag
         enableZoomInteraction
-        minZoom={0.2}
+        minZoom={0.01}
         maxZoom={10}
       />
 
-      {/* Zoom controls */}
+      {/* Zoom + fullscreen controls */}
       <div className="absolute top-3 right-3 flex flex-col gap-1">
         {[
-          { icon: <ZoomIn className="h-4 w-4" />,   fn: () => fgRef.current?.zoom(fgRef.current.zoom() * 1.5, 300) },
-          { icon: <ZoomOut className="h-4 w-4" />,  fn: () => fgRef.current?.zoom(fgRef.current.zoom() / 1.5, 300) },
-          { icon: <Maximize2 className="h-4 w-4" />,fn: () => fgRef.current?.zoomToFit(400, 80) },
+          { icon: <ZoomIn    className="h-4 w-4" />, fn: () => fgRef.current?.zoom(fgRef.current.zoom() * 1.5, 300) },
+          { icon: <ZoomOut   className="h-4 w-4" />, fn: () => fgRef.current?.zoom(fgRef.current.zoom() / 2,   300) },
+          { icon: <Maximize2 className="h-4 w-4" />, fn: () => fgRef.current?.zoomToFit(400, 80) },
         ].map(({ icon, fn }, i) => (
           <Button key={i} size="icon" variant="ghost"
             className="h-8 w-8 bg-black/50 text-white/60 hover:bg-black/70 hover:text-white"
@@ -302,6 +323,16 @@ export default function NaicsGraph({ graphData, selectedSector, onVendorClick })
             {icon}
           </Button>
         ))}
+        <Button
+          size="icon" variant="ghost"
+          className="h-8 w-8 bg-black/50 text-white/60 hover:bg-black/70 hover:text-white mt-1 border-t border-white/10"
+          onClick={toggleFullscreen}
+          title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+        >
+          {isFullscreen
+            ? <Minimize2 className="h-4 w-4" />
+            : <Maximize2 className="h-4 w-4" />}
+        </Button>
       </div>
 
       <Legend />

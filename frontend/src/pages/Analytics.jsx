@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { getParam, setParams } from '@/hooks/useUrlState';
 import { Fragment } from 'react';
 import {
   BarChart3,
@@ -246,9 +247,11 @@ function EmergingWinners({ data, onSelectVendor }) {
           </div>
           <div className="shrink-0 text-right">
             <p className="text-sm font-semibold text-emerald-700">
-              {numeric(vendor.growthPct).toFixed(1)}%
+              +{numeric(vendor.cagrPct).toFixed(1)}% CAGR
             </p>
-            <p className="text-xs text-slate-500">YoY growth</p>
+            <p className="text-xs text-slate-500">
+              over {vendor.yearSpan}yr ({vendor.firstYear}→{vendor.lastYear})
+            </p>
           </div>
           <div className="hidden shrink-0 text-right md:block">
             <p className="text-sm font-semibold text-slate-900">{fmtCompact.format(numeric(vendor.totalObligated))}</p>
@@ -662,8 +665,19 @@ function RevenueStability({ selectedVendor, data }) {
   );
 }
 
+function readAnalyticsUrl() {
+  return {
+    year:              getParam('a_year',       ''),
+    agencyCode:        getParam('a_agency',     ''),
+    naicsCode:         getParam('a_naics',      ''),
+    stateCode:         getParam('a_state',      ''),
+    competitionBucket: getParam('a_competition',''),
+    setAsideCode:      getParam('a_set_aside',  ''),
+  };
+}
+
 export default function Analytics() {
-  const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filters, setFilters] = useState(readAnalyticsUrl);
   const [filterOptions, setFilterOptions] = useState({
     years: [],
     agencies: [],
@@ -844,6 +858,25 @@ export default function Analytics() {
     };
   }, [selectedVendor?.vendorId, apiParams]);
 
+  // Sync filters → URL whenever they change
+  useEffect(() => {
+    setParams({
+      a_year:        filters.year,
+      a_agency:      filters.agencyCode,
+      a_naics:       filters.naicsCode,
+      a_state:       filters.stateCode,
+      a_competition: filters.competitionBucket,
+      a_set_aside:   filters.setAsideCode,
+    });
+  }, [filters]);
+
+  // Sync URL → filters on popstate (back/forward)
+  useEffect(() => {
+    const handler = () => setFilters(readAnalyticsUrl());
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
+
   function updateFilter(key, value) {
     setFilters((current) => ({ ...current, [key]: value }));
   }
@@ -984,11 +1017,16 @@ export default function Analytics() {
         </ChartCard>
 
         <ChartCard
-          title="Emerging Winners"
-          description="Breakout vendors ranked by growth, first-award signals, and total obligated spend."
+          title="Fastest Growing Vendors"
+          description="Ranked by CAGR (Compound Annual Growth Rate) across fiscal years in the dataset. Use the year filter above to restrict to vendors active in a specific year."
           icon={Building2}
           loading={overviewLoading}
           error={errors.emergingWinners}
+          actions={
+            <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">
+              {filters.year ? `Active in FY${filters.year}` : 'All fiscal years (FY1979–FY2015)'}
+            </span>
+          }
         >
           <EmergingWinners data={emergingWinners} onSelectVendor={handleSelectVendor} />
         </ChartCard>

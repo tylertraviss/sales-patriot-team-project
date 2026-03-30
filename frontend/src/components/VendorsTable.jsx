@@ -31,11 +31,13 @@ const COLUMNS = [
   { key: 'totalObligated',   label: 'Total Obligated', sortable: true,  type: 'currency', width: 'w-[160px]', align: 'right' },
   { key: 'awardCount',       label: 'Award Count',     sortable: true,  type: 'number',   width: 'w-[120px]', align: 'right' },
   { key: 'stateCode',        label: 'State',           sortable: false, type: 'badge',    width: 'w-[80px]',  align: 'center' },
-  { key: 'countryCode',      label: 'Country',         sortable: false, type: 'string',   width: 'w-[100px]' },
+  { key: 'countryCode',        label: 'Country',          sortable: false, type: 'string', width: 'w-[100px]' },
+  { key: 'registrationDate',   label: 'Registered',       sortable: false, type: 'date',   width: 'w-[130px]' },
 ];
 
-const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+const fmt    = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const fmtNum = new Intl.NumberFormat('en-US');
+const fmtDate = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
 function formatCell(value, type) {
   if (value === null || value === undefined || value === '') return <span className="text-muted-foreground">—</span>;
@@ -43,6 +45,10 @@ function formatCell(value, type) {
     case 'currency': return fmt.format(Number(value));
     case 'number':   return fmtNum.format(Number(value));
     case 'badge':    return <Badge variant="secondary" className="font-mono text-xs">{value}</Badge>;
+    case 'date': {
+      const d = new Date(value);
+      return isNaN(d) ? String(value) : fmtDate.format(d);
+    }
     default:         return String(value);
   }
 }
@@ -66,7 +72,7 @@ function SkeletonRows({ count, cols }) {
   ));
 }
 
-export default function VendorsTable({ data, loading, error, sort, onSort, onRetry, limit, onRowClick }) {
+export default function VendorsTable({ data, loading, error, sort, onSort, onRetry, limit, onRowClick, selectedVendorId }) {
   // Determine visible columns: always show COLUMNS, but also render any
   // extra keys found in the first row that aren't in our known set.
   const extraKeys = data.length
@@ -153,10 +159,16 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
           )}
 
           {/* Data rows */}
-          {!loading && !error && data.map((row, idx) => (
+          {!loading && !error && data.map((row, idx) => {
+            const isSelected = selectedVendorId &&
+              (row.cageCode === selectedVendorId || row.uei === selectedVendorId);
+            return (
             <TableRow
               key={row.vendorId ?? row.uei ?? idx}
-              className={cn(onRowClick && 'cursor-pointer hover:bg-muted/50')}
+              className={cn(
+                onRowClick && 'cursor-pointer hover:bg-muted/50',
+                isSelected && 'bg-blue-50 border-l-2 border-l-blue-500 hover:bg-blue-50/80'
+              )}
               onClick={() => onRowClick?.(row)}
             >
               {displayColumns.map((col) => (
@@ -172,7 +184,8 @@ export default function VendorsTable({ data, loading, error, sort, onSort, onRet
                 </TableCell>
               ))}
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </div>

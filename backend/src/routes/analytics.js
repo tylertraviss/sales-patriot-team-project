@@ -439,39 +439,93 @@ router.get('/investment-scores', async (req, res, next) => {
 
 router.get('/emerging-winners', async (req, res, next) => {
   try {
-    const limit = parseLimit(req.query.limit, { fallback: 25, max: 50 });
+    const limit        = parseLimit(req.query.limit, { fallback: 25, max: 50 });
+    const minObligated = Number.parseFloat(req.query.min_obligated || '0') || 0;
+    const minYears     = Math.max(2, parseInt(req.query.min_years || '3', 10) || 3);
+    // Minimum first-year spend — ensures CAGR denominator is meaningful.
+    const MIN_FIRST_YEAR = 100000; // $100k
+
     const values = [];
     const existence = buildVendorExistenceClause(req.query, { vendorAlias: 'v', values });
-    const conditions = [existence.clause];
 
-    values.push(Number.parseFloat(req.query.min_obligated || '0') || 0);
-    conditions.push(`COALESCE(s.total_obligated_amount, 0) >= $${values.length}`);
-    conditions.push(`(s.previous_year_obligated_amount IS NULL OR COALESCE(s.yoy_growth_pct, 0) > 25)`);
+    values.push(minObligated);
+    const minObligatedParam = `$${values.length}`;
+
+    values.push(minYears);
+    const minYearsParam = `$${values.length}`;
 
     const result = await db.query(
-      `WITH active_years AS (
-         SELECT vendor_id, COUNT(*)::INT AS active_years
+      // CAGR-based emerging winners:
+      // Normalises growth across the full time span so a vendor growing
+      // 500% over 2 years (CAGR ~141%) ranks higher than one growing
+      // 1000% over 10 years (CAGR ~27%).
+      `WITH
+       -- First and last fiscal year per vendor, plus active year count
+       fl AS (
+         SELECT
+           vendor_id,
+           MIN(fiscal_year)::int                    AS first_year,
+           MAX(fiscal_year)::int                    AS last_year,
+           COUNT(DISTINCT fiscal_year)::int         AS active_years
          FROM vendor_year_metrics
          GROUP BY vendor_id
+         HAVING COUNT(DISTINCT fiscal_year) >= ${minYearsParam}
+       ),
+       -- Join to get actual spend amounts for first and last year
+       fa AS (
+         SELECT
+           fl.vendor_id,
+           fl.first_year,
+           fl.last_year,
+           fl.active_years,
+           fl.last_year - fl.first_year            AS year_span,
+           fy.obligated_amount                     AS first_amount,
+           ly.obligated_amount                     AS last_amount
+         FROM fl
+         JOIN vendor_year_metrics fy
+           ON fy.vendor_id = fl.vendor_id AND fy.fiscal_year = fl.first_year
+         JOIN vendor_year_metrics ly
+           ON ly.vendor_id = fl.vendor_id AND ly.fiscal_year = fl.last_year
+         -- Must have meaningful first-year spend and actual growth
+         WHERE fy.obligated_amount >= ${MIN_FIRST_YEAR}
+           AND ly.obligated_amount > fy.obligated_amount
+           AND fl.last_year > fl.first_year
+       ),
+       -- Compute CAGR
+       cagr AS (
+         SELECT *,
+           ROUND(
+             (POWER(
+               last_amount::numeric / NULLIF(first_amount, 0)::numeric,
+               1.0 / year_span
+             ) - 1) * 100,
+             2
+           ) AS cagr_pct
+         FROM fa
        )
        SELECT
-         s.vendor_id AS "vendorId",
-         s.cage_code AS "cageCode",
-         s.uei,
-         s.company_name AS name,
-         s.first_award_date AS "firstAwardDate",
-         COALESCE(ay.active_years, 0) AS "activeYears",
-         COALESCE(s.yoy_growth_pct, 0) AS "growthPct",
-         COALESCE(s.total_obligated_amount, 0) AS "totalObligated",
-         COALESCE(s.award_count, 0) AS "awardCount",
-         s.latest_fiscal_year AS "latestFiscalYear",
-         (s.previous_year_obligated_amount IS NULL OR s.previous_year_obligated_amount = 0) AS "isFirstEverAward",
-         s.cached_at AS "cachedAt"
-       FROM vendor_investment_summary s
-       JOIN vendor_entities v ON v.vendor_id = s.vendor_id
-       LEFT JOIN active_years ay ON ay.vendor_id = s.vendor_id
-       WHERE ${conditions.join(' AND ')}
-       ORDER BY COALESCE(s.yoy_growth_pct, 999999) DESC NULLS LAST, COALESCE(s.total_obligated_amount, 0) DESC
+         v.vendor_id                                AS "vendorId",
+         v.cage_code                                AS "cageCode",
+         v.uei,
+         v.vendor_name                              AS name,
+         s.first_award_date                         AS "firstAwardDate",
+         c.active_years                             AS "activeYears",
+         c.year_span                                AS "yearSpan",
+         c.first_year                               AS "firstYear",
+         c.last_year                                AS "lastYear",
+         c.first_amount                             AS "firstObligated",
+         c.last_amount                              AS "lastObligated",
+         c.cagr_pct                                 AS "cagrPct",
+         COALESCE(s.total_obligated_amount, 0)      AS "totalObligated",
+         COALESCE(s.award_count, 0)                 AS "awardCount",
+         s.cached_at                                AS "cachedAt"
+       FROM cagr c
+       JOIN vendor_entities v           ON v.vendor_id = c.vendor_id
+       JOIN vendor_investment_summary s ON s.vendor_id = c.vendor_id
+       WHERE ${existence.clause}
+         AND COALESCE(s.total_obligated_amount, 0) >= ${minObligatedParam}
+         AND c.cagr_pct > 25
+       ORDER BY c.cagr_pct DESC, COALESCE(s.total_obligated_amount, 0) DESC
        LIMIT $${values.length + 1}`,
       [...values, limit],
     );

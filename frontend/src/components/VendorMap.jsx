@@ -1,11 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   ComposableMap,
   Geographies,
   Geography,
-  ZoomableGroup,
 } from 'react-simple-maps';
+import { BarChart, Bar, XAxis, YAxis } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { getGeographicClustering } from '@/services/api';
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json';
@@ -27,17 +28,21 @@ const FIPS_TO_STATE = {
   '55':'WI','56':'WY',
 };
 
-// Color scale: light → dark emerald based on log-normalised spend
+// Color scale: pale sky → deep navy blue, log-normalised
+// No-data states stay light grey to clearly separate them from data states.
+const NO_DATA_COLOR = '#e2e8f0'; // slate-200
+
 function stateColor(obligated, max) {
-  if (!obligated || !max) return '#f0fdf4';
+  if (!obligated || !max) return NO_DATA_COLOR;
   const t = Math.log1p(obligated) / Math.log1p(max);
   const stops = [
-    [240, 253, 244], // emerald-50
-    [187, 247, 208], // emerald-100
-    [110, 231, 183], // emerald-300
-    [16,  185, 129], // emerald-500
-    [4,   120, 87],  // emerald-700
-    [6,   78,  59],  // emerald-900
+    [224, 242, 254], // sky-100
+    [125, 211, 252], // sky-300
+    [14,  165, 233], // sky-500
+    [2,   132, 199], // sky-600  — noticeably darker
+    [3,   105, 161], // sky-700
+    [12,  74,  110], // sky-900 (near-navy)
+    [15,  23,  42],  // slate-950 (deep navy)
   ];
   const idx = t * (stops.length - 1);
   const lo = stops[Math.floor(idx)];
@@ -55,7 +60,20 @@ export default function VendorMap({ onStateClick }) {
   const [error, setError]       = useState(null);
   const [tooltip, setTooltip]   = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom]         = useState(1);
+  const [scale, setScale] = useState(1000);
+  const mapRef = useRef(null);
+
+  // Attach a non-passive wheel listener so e.preventDefault() actually works
+  useEffect(() => {
+    const el = mapRef.current;
+    if (!el) return;
+    const handler = (e) => {
+      e.preventDefault();
+      setScale((s) => Math.min(8000, Math.max(400, s * (e.deltaY < 0 ? 1.15 : 0.87))));
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, []);
 
   useEffect(() => {
     getGeographicClustering({ limit: 60 })
@@ -85,7 +103,7 @@ export default function VendorMap({ onStateClick }) {
 
   return (
     <div
-      className="relative rounded-xl border bg-slate-50 overflow-hidden"
+      className="rounded-xl border bg-slate-50 overflow-hidden"
       onMouseMove={(e) => setTooltipPos({ x: e.clientX, y: e.clientY })}
     >
       {/* Header */}
@@ -98,8 +116,10 @@ export default function VendorMap({ onStateClick }) {
         </div>
         {/* Legend */}
         <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+          <span className="inline-block w-3 h-3 rounded-sm border border-slate-300" style={{ background: NO_DATA_COLOR }} />
+          <span className="mr-1">No data</span>
           <span>Low</span>
-          {[0, 0.2, 0.4, 0.6, 0.8, 1].map((t) => (
+          {[0.05, 0.2, 0.4, 0.6, 0.8, 1].map((t) => (
             <span
               key={t}
               className="inline-block w-5 h-3 rounded-sm"
@@ -110,62 +130,114 @@ export default function VendorMap({ onStateClick }) {
         </div>
       </div>
 
-      {/* Map */}
-      <ComposableMap
-        projection="geoAlbersUsa"
-        projectionConfig={{ scale: 1000 }}
-        style={{ width: '100%', height: 'auto' }}
-        viewBox="0 0 960 600"
-      >
-        <ZoomableGroup
-          zoom={zoom}
-          minZoom={1}
-          maxZoom={6}
-          onMoveEnd={({ zoom: z }) => setZoom(z)}
-        >
-          <Geographies geography={GEO_URL}>
-            {({ geographies }) =>
-              geographies.map((geo) => {
-                const fips  = geo.id;
-                const code  = FIPS_TO_STATE[String(fips).padStart(2, '0')];
-                const data  = code ? stateMap[code] : null;
-                const spend = data ? Number(data.totalObligated) : 0;
-                const fill  = stateColor(spend, maxSpend);
-                const isTop = !!data;
+      {/* Map + sidebar chart side by side */}
+      <div className="flex">
 
-                return (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    fill={fill}
-                    stroke="#ffffff"
-                    strokeWidth={0.5}
-                    style={{
-                      default:  { outline: 'none', cursor: isTop ? 'pointer' : 'default' },
-                      hover:    { outline: 'none', fill: isTop ? '#059669' : '#e2e8f0', cursor: isTop ? 'pointer' : 'default' },
-                      pressed:  { outline: 'none' },
-                    }}
-                    onMouseEnter={() => code && setTooltip({ code, data, spend })}
-                    onMouseLeave={() => setTooltip(null)}
-                    onClick={() => data && onStateClick?.(data)}
+        {/* Map — takes remaining width */}
+        <div ref={mapRef} className="relative flex-1 min-w-0">
+          <ComposableMap
+            projection="geoAlbersUsa"
+            projectionConfig={{ scale }}
+            className="w-full h-auto"
+            viewBox="0 0 960 600"
+          >
+            <Geographies geography={GEO_URL}>
+              {({ geographies }) =>
+                geographies.map((geo) => {
+                  const fips  = geo.id;
+                  const code  = FIPS_TO_STATE[String(fips).padStart(2, '0')];
+                  const data  = code ? stateMap[code] : null;
+                  const spend = data ? Number(data.totalObligated) : 0;
+                  const fill  = stateColor(spend, maxSpend);
+                  const isTop = !!data;
+
+                  return (
+                    <Geography
+                      key={geo.rsmKey}
+                      geography={geo}
+                      fill={fill}
+                      stroke="#ffffff"
+                      strokeWidth={0.5}
+                      style={{
+                        default:  { outline: 'none', cursor: isTop ? 'pointer' : 'default' },
+                        hover:    { outline: 'none', fill: isTop ? '#0284c7' : '#cbd5e1', cursor: isTop ? 'pointer' : 'default' },
+                        pressed:  { outline: 'none' },
+                      }}
+                      onMouseEnter={() => code && setTooltip({ code, data, spend })}
+                      onMouseLeave={() => setTooltip(null)}
+                      onClick={() => data && onStateClick?.(data)}
+                    />
+                  );
+                })
+              }
+            </Geographies>
+          </ComposableMap>
+
+          {/* Zoom controls */}
+          <div className="absolute bottom-3 right-3 flex flex-col gap-1">
+            <button
+              onClick={() => setScale((s) => Math.min(8000, s * 1.4))}
+              className="w-7 h-7 rounded border bg-white shadow text-sm font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center"
+            >+</button>
+            <button
+              onClick={() => setScale((s) => Math.max(400, s / 1.4))}
+              className="w-7 h-7 rounded border bg-white shadow text-sm font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center"
+            >−</button>
+            <button
+              onClick={() => setScale(1000)}
+              className="w-7 h-7 rounded border bg-white shadow text-[10px] font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center"
+              title="Reset zoom"
+            >↺</button>
+          </div>
+        </div>
+
+        {/* Sidebar bar chart — fixed width */}
+        {geoData.length > 0 && (() => {
+          const chartData = geoData.slice(0, 10).map((d) => ({
+            ...d,
+            spend: Number(d.totalObligated),
+            label: d.stateCode,
+          }));
+          const chartConfig = { spend: { label: 'Obligated', color: 'var(--chart-1)' } };
+          return (
+            <div className="w-56 shrink-0 border-l bg-white px-4 pt-4 pb-4 flex flex-col gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Top States
+              </p>
+              <ChartContainer config={chartConfig} className="flex-1 w-full min-h-[200px]">
+                <BarChart
+                  data={chartData}
+                  layout="vertical"
+                  margin={{ top: 0, right: 52, left: 0, bottom: 0 }}
+                  onClick={(e) => e?.activePayload?.[0] && onStateClick?.(e.activePayload[0].payload)}
+                >
+                  <XAxis type="number" hide />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={24}
+                    tick={{ fontSize: 10, fontWeight: 600 }}
+                    tickLine={false}
+                    axisLine={false}
                   />
-                );
-              })
-            }
-          </Geographies>
-        </ZoomableGroup>
-      </ComposableMap>
-
-      {/* Zoom controls */}
-      <div className="absolute bottom-4 right-4 flex flex-col gap-1">
-        <button
-          onClick={() => setZoom((z) => Math.min(6, z + 0.5))}
-          className="w-7 h-7 rounded border bg-white shadow text-sm font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center"
-        >+</button>
-        <button
-          onClick={() => setZoom((z) => Math.max(1, z - 0.5))}
-          className="w-7 h-7 rounded border bg-white shadow text-sm font-bold text-gray-600 hover:bg-gray-50 flex items-center justify-center"
-        >−</button>
+                  <ChartTooltip content={<ChartTooltipContent hideIndicator nameKey="label" />} />
+                  <Bar
+                    dataKey="spend"
+                    fill="var(--chart-1)"
+                    radius={[0, 3, 3, 0]}
+                    maxBarSize={14}
+                    cursor="pointer"
+                    label={{
+                      position: 'right',
+                      formatter: (v) => fmtCompact.format(v),
+                      fontSize: 10,
+                    }}
+                  />
+                </BarChart>
+              </ChartContainer>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Tooltip */}
@@ -181,7 +253,7 @@ export default function VendorMap({ onStateClick }) {
             </p>
             {tooltip.data ? (
               <>
-                <p className="text-emerald-700 font-medium">{fmtCompact.format(tooltip.spend)}</p>
+                <p className="text-sky-700 font-medium">{fmtCompact.format(tooltip.spend)}</p>
                 <p className="text-muted-foreground">{fmtNum.format(tooltip.data.awardCount)} awards</p>
                 <p className="text-muted-foreground">{Number(tooltip.data.pctOfNationalTotal).toFixed(1)}% of national total</p>
                 {tooltip.data.topVendors?.[0] && (
@@ -189,7 +261,7 @@ export default function VendorMap({ onStateClick }) {
                     Top: {tooltip.data.topVendors[0].name}
                   </p>
                 )}
-                <p className="text-[10px] text-emerald-600 pt-0.5">Click to filter vendors</p>
+                <p className="text-[10px] text-sky-600 pt-0.5">Click to filter vendors</p>
               </>
             ) : (
               <p className="text-muted-foreground">No contract data</p>

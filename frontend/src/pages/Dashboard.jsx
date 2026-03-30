@@ -1,10 +1,17 @@
 import { ArrowRight } from 'lucide-react';
 import KPIBanner from '../components/KPIBanner';
 import TopNaics from '../components/TopNaics';
-import SpendingByState from '../components/SpendingByState';
 import TopEarners from '../components/TopEarners';
+import VendorMap from '../components/VendorMap';
+import { navigateTo, setParams } from '@/hooks/useUrlState';
 
 export default function Dashboard({ onOpenOpportunities }) {
+  function handleStateClick(stateData) {
+    // Navigate to Vendors page filtered by the clicked state
+    setParams({ state: stateData.stateCode, view: '' });
+    navigateTo('vendors');
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* KPI banner */}
@@ -30,14 +37,14 @@ export default function Dashboard({ onOpenOpportunities }) {
         </div>
       </div>
 
-      {/* Top earners — full width, just under KPIs */}
+      {/* Top earners — full width */}
       <TopEarners />
 
-      {/* 2 charts side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <TopNaics />
-        <SpendingByState />
-      </div>
+      {/* Top NAICS — full width */}
+      <TopNaics />
+
+      {/* Geographic spend map — full width */}
+      <VendorMap onStateClick={handleStateClick} />
     </div>
   );
 }

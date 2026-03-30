@@ -11,6 +11,7 @@ import {
 import { mockGetNaicsGraph } from '@/services/mockApi';
 import VendorDetailDrawer from '@/components/vendor/VendorDetailDrawer';
 import { cn } from '@/lib/utils';
+import { getParam, setParams } from '@/hooks/useUrlState';
 
 const NaicsGraph = lazy(() => import('@/components/NaicsGraph'));
 
@@ -21,17 +22,41 @@ const SECTOR_OPTIONS             = ['5', '10', '20', '30', '40', '50'];
 const VENDORS_PER_SECTOR_OPTIONS = ['5', '10', '15', '20', '25', '30', '40', '50', '75', '100', 'All'];
 
 export default function Graph() {
-  const [sectors,        setSectors]        = useState('20');
-  const [vendorsPerSector, setVendorsPerSector] = useState('10');
+  const [sectors,          setSectorsRaw]   = useState(() => getParam('sectors', '20'));
+  const [vendorsPerSector, setVpsRaw]       = useState(() => getParam('vps', '10'));
 
   const [rawGraph,       setRawGraph]       = useState(null);
   const [sectorList,     setSectorList]     = useState([]);
-  const [selectedSector, setSelected]       = useState(null);
+  const [selectedSector, setSelectedRaw]    = useState(() => getParam('sector', null) || null);
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState(null);
 
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [drawerOpen,     setDrawerOpen]     = useState(false);
+
+  function setSectors(v) {
+    setSectorsRaw(v);
+    setParams({ sectors: v === '20' ? '' : v });
+  }
+  function setVendorsPerSector(v) {
+    setVpsRaw(v);
+    setParams({ vps: v === '10' ? '' : v });
+  }
+  function setSelected(v) {
+    setSelectedRaw(v);
+    setParams({ sector: v ?? '' });
+  }
+
+  // Sync from URL on popstate (back/forward)
+  useEffect(() => {
+    const handler = () => {
+      setSectorsRaw(getParam('sectors', '20'));
+      setVpsRaw(getParam('vps', '10'));
+      setSelectedRaw(getParam('sector', null) || null);
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
 
   // Re-fetch whenever sectors or vendorsPerSector changes
   useEffect(() => {

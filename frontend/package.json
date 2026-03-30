@@ -22,7 +22,7 @@
     "react-force-graph-2d": "^1.29.1",
     "react-globe.gl": "^2.37.0",
     "react-simple-maps": "^3.0.0",
-    "recharts": "^3.8.1",
+    "recharts": "^2.15.4",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

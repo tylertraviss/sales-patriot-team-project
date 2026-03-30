@@ -1,55 +1,138 @@
 import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
-import { LayoutList, Globe2, Map, Loader2 } from 'lucide-react';
+import { LayoutList, Globe2, Loader2 } from 'lucide-react';
 import VendorsFilters from '@/components/VendorsFilters';
 import VendorsTable from '@/components/VendorsTable';
 import VendorsPagination from '@/components/VendorsPagination';
 import VendorDetailDrawer from '@/components/vendor/VendorDetailDrawer';
-import VendorMap from '@/components/VendorMap';
 import { mockGetVendors } from '@/services/mockApi';
 import { cn } from '@/lib/utils';
+import { getParam, setParams } from '@/hooks/useUrlState';
 
 const VendorGlobe = lazy(() => import('@/components/VendorGlobe'));
 
-const DEFAULT_FILTERS = {
-  search: '',
-  year: '2010',
-  stateCode: '',
-  naicsCode: '',
-  agencyCode: '',
-  setAsideType: '',
+// ── URL param keys ────────────────────────────────────────────────────────────
+const P = {
+  view:       'view',
+  search:     'search',
+  year:       'year',
+  state:      'state',
+  naics:      'naics',
+  agency:     'agency',
+  setAside:   'set_aside',
+  sort:       'sort',
+  order:      'order',
+  page:       'page',
+  limit:      'limit',
+  vendor:     'vendor',
 };
 
+// ── Defaults ──────────────────────────────────────────────────────────────────
+const DEFAULT_FILTERS = {
+  search: '', year: '', stateCode: '', naicsCode: '', agencyCode: '', setAsideType: '',
+};
 const DEFAULT_SORT = { sort: 'totalObligated', order: 'desc' };
 const DEFAULT_PAGE = { page: 1, limit: 25 };
+
+// ── Read initial state from URL ───────────────────────────────────────────────
+function readUrlState() {
+  return {
+    viewMode:   getParam(P.view, 'table') === 'map' ? 'table' : getParam(P.view, 'table'),
+    filters: {
+      search:       getParam(P.search,  ''),
+      year:         getParam(P.year,    ''),
+      stateCode:    getParam(P.state,   ''),
+      naicsCode:    getParam(P.naics,   ''),
+      agencyCode:   getParam(P.agency,  ''),
+      setAsideType: getParam(P.setAside,''),
+    },
+    sort: {
+      sort:  getParam(P.sort,  DEFAULT_SORT.sort),
+      order: getParam(P.order, DEFAULT_SORT.order),
+    },
+    pagination: {
+      page:  parseInt(getParam(P.page,  '1'), 10)  || 1,
+      limit: parseInt(getParam(P.limit, '25'), 10) || 25,
+    },
+    vendorId: getParam(P.vendor, ''),
+  };
+}
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_API === 'true';
 
-const GLOBE_PAGE_SIZE = 100;  // backend hard cap
-const GLOBE_MAX_PAGES = 20;   // 20 × 100 = 2,000 vendors max
+const GLOBE_PAGE_SIZE = 100;
+const GLOBE_MAX_PAGES = 20;
 
 export default function Vendors() {
-  const [viewMode, setViewMode] = useState('table');
+  const init = readUrlState();
 
-  const [filters, setFilters] = useState(DEFAULT_FILTERS);
-  const [sort, setSort] = useState(DEFAULT_SORT);
-  const [pagination, setPagination] = useState(DEFAULT_PAGE);
+  const [viewMode,    setViewModeRaw]  = useState(init.viewMode);
+  const [filters,     setFilters]      = useState(init.filters);
+  const [sort,        setSort]         = useState(init.sort);
+  const [pagination,  setPagination]   = useState(init.pagination);
 
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState(init.filters.search);
   const debounceRef = useRef(null);
 
-  const [data, setData] = useState([]);
-  const [allVendors, setAllVendors] = useState([]);
+  const [data,            setData]           = useState([]);
+  const [allVendors,      setAllVendors]      = useState([]);
   const [allVendorsTotal, setAllVendorsTotal] = useState(0);
-  const [globeLoading, setGlobeLoading] = useState(false);
-  const [paginationMeta, setPaginationMeta] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [globeLoading,    setGlobeLoading]    = useState(false);
+  const [paginationMeta,  setPaginationMeta]  = useState(null);
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState(null);
 
-  const [selectedVendor, setSelectedVendor] = useState(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  // Drawer — driven by ?vendor= param
+  const [selectedVendorId, setSelectedVendorId] = useState(init.vendorId);
+  const [selectedVendor,   setSelectedVendor]   = useState(null);
+  const [drawerOpen,       setDrawerOpen]        = useState(!!init.vendorId);
 
-  // Debounce search
+  // ── URL sync helpers ────────────────────────────────────────────────────────
+
+  function setViewMode(v) {
+    setViewModeRaw(v);
+    setParams({ [P.view]: v === 'table' ? '' : v });
+  }
+
+  function syncAllToUrl(f, s, pg, vm, vid) {
+    setParams({
+      [P.view]:     vm === 'table' ? '' : vm,
+      [P.search]:   f.search,
+      [P.year]:     f.year === '2010' ? '' : f.year,
+      [P.state]:    f.stateCode,
+      [P.naics]:    f.naicsCode,
+      [P.agency]:   f.agencyCode,
+      [P.setAside]: f.setAsideType,
+      [P.sort]:     s.sort === DEFAULT_SORT.sort   ? '' : s.sort,
+      [P.order]:    s.order === DEFAULT_SORT.order ? '' : s.order,
+      [P.page]:     pg.page  === 1  ? '' : pg.page,
+      [P.limit]:    pg.limit === 25 ? '' : pg.limit,
+      [P.vendor]:   vid,
+    });
+  }
+
+  // Sync URL on every meaningful state change
+  useEffect(() => {
+    syncAllToUrl(filters, sort, pagination, viewMode, selectedVendorId);
+  }, [filters, sort, pagination, viewMode, selectedVendorId]);
+
+  // Sync state when popstate fires (back/forward)
+  useEffect(() => {
+    const handler = () => {
+      const s = readUrlState();
+      setViewModeRaw(s.viewMode);
+      setFilters(s.filters);
+      setDebouncedSearch(s.filters.search);
+      setSort(s.sort);
+      setPagination(s.pagination);
+      setSelectedVendorId(s.vendorId);
+      if (!s.vendorId) { setDrawerOpen(false); setSelectedVendor(null); }
+    };
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
+
+  // ── Debounce search ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -59,6 +142,7 @@ export default function Vendors() {
     return () => clearTimeout(debounceRef.current);
   }, [filters.search]);
 
+  // ── Fetch vendors (table) ───────────────────────────────────────────────────
   const fetchVendors = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -66,28 +150,23 @@ export default function Vendors() {
       let json;
       if (USE_MOCK) {
         json = await mockGetVendors({
-          page: pagination.page,
-          limit: pagination.limit,
-          sort: sort.sort,
-          order: sort.order,
-          year: filters.year,
-          search: debouncedSearch,
-          stateCode: filters.stateCode,
-          naicsCode: filters.naicsCode,
-          agencyCode: filters.agencyCode,
-          setAsideType: filters.setAsideType,
+          page: pagination.page, limit: pagination.limit,
+          sort: sort.sort, order: sort.order,
+          year: filters.year, search: debouncedSearch,
+          stateCode: filters.stateCode, naicsCode: filters.naicsCode,
+          agencyCode: filters.agencyCode, setAsideType: filters.setAsideType,
         });
       } else {
         const params = new URLSearchParams();
-        params.set('page', pagination.page);
+        params.set('page',  pagination.page);
         params.set('limit', pagination.limit);
-        params.set('sort', sort.sort);
+        params.set('sort',  sort.sort);
         params.set('order', sort.order);
-        if (filters.year)         params.set('year', filters.year);
-        if (debouncedSearch)      params.set('search', debouncedSearch);
-        if (filters.stateCode)    params.set('state_code', filters.stateCode);
-        if (filters.naicsCode)    params.set('naics_code', filters.naicsCode);
-        if (filters.agencyCode)   params.set('agency_code', filters.agencyCode);
+        if (filters.year)         params.set('year',          filters.year);
+        if (debouncedSearch)      params.set('search',         debouncedSearch);
+        if (filters.stateCode)    params.set('state_code',     filters.stateCode);
+        if (filters.naicsCode)    params.set('naics_code',     filters.naicsCode);
+        if (filters.agencyCode)   params.set('agency_code',    filters.agencyCode);
         if (filters.setAsideType) params.set('set_aside_code', filters.setAsideType);
         const res = await fetch(`${BASE_URL}/vendors?${params.toString()}`);
         if (!res.ok) throw new Error(`Server error: ${res.status} ${res.statusText}`);
@@ -106,7 +185,24 @@ export default function Vendors() {
 
   useEffect(() => { fetchVendors(); }, [fetchVendors]);
 
-  // Fetch all vendors for globe — paginate up to 2,000 in parallel
+  // ── After data loads, restore drawer from URL ?vendor= param ───────────────
+  useEffect(() => {
+    if (!selectedVendorId || loading) return;
+    // Find the matching row in current page data
+    const match = data.find(
+      (r) => r.cageCode === selectedVendorId || r.uei === selectedVendorId
+    );
+    if (match) {
+      setSelectedVendor(match);
+      setDrawerOpen(true);
+    } else if (selectedVendorId) {
+      // Vendor not on this page but ID is valid — open drawer directly by ID
+      setSelectedVendor({ cageCode: selectedVendorId, name: '' });
+      setDrawerOpen(true);
+    }
+  }, [data, selectedVendorId, loading]);
+
+  // ── Fetch all vendors for globe ─────────────────────────────────────────────
   useEffect(() => {
     async function loadAll() {
       setGlobeLoading(true);
@@ -117,39 +213,30 @@ export default function Vendors() {
           setAllVendorsTotal(json.pagination?.total ?? 0);
           return;
         }
-
-        // First request to find out total pages
         const first = await fetch(
           `${BASE_URL}/vendors?page=1&limit=${GLOBE_PAGE_SIZE}&sort=totalObligated&order=desc`
         ).then((r) => r.json());
-
         const total      = first.pagination?.total ?? 0;
         const totalPages = first.pagination?.totalPages ?? 1;
         const pagesToFetch = Math.min(GLOBE_MAX_PAGES, totalPages);
-
         setAllVendorsTotal(total);
-
-        // Fire remaining pages in parallel
         const restPromises = [];
         for (let p = 2; p <= pagesToFetch; p++) {
           restPromises.push(
             fetch(`${BASE_URL}/vendors?page=${p}&limit=${GLOBE_PAGE_SIZE}&sort=totalObligated&order=desc`)
-              .then((r) => r.json())
-              .then((j) => j.data ?? [])
-              .catch(() => [])
+              .then((r) => r.json()).then((j) => j.data ?? []).catch(() => [])
           );
         }
         const restPages = await Promise.all(restPromises);
-        const all = [...(first.data ?? []), ...restPages.flat()];
-        setAllVendors(all);
-      } catch {
-        /* silent — globe shows whatever loaded */
-      } finally {
+        setAllVendors([...(first.data ?? []), ...restPages.flat()]);
+      } catch { /* silent */ } finally {
         setGlobeLoading(false);
       }
     }
     loadAll();
   }, []);
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   function handleFilterChange(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -164,7 +251,7 @@ export default function Vendors() {
 
   function handleSort(column) {
     setSort((prev) => ({
-      sort: column,
+      sort:  column,
       order: prev.sort === column && prev.order === 'asc' ? 'desc' : 'asc',
     }));
     setPagination((prev) => ({ ...prev, page: 1 }));
@@ -179,10 +266,21 @@ export default function Vendors() {
   }
 
   function handleRowClick(row) {
+    const id = row.cageCode ?? row.uei ?? '';
     setSelectedVendor(row);
+    setSelectedVendorId(id);
     setDrawerOpen(true);
   }
 
+  function handleDrawerClose(open) {
+    setDrawerOpen(open);
+    if (!open) {
+      setSelectedVendorId('');
+      setSelectedVendor(null);
+    }
+  }
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-col gap-6">
       {/* Page header + view toggle */}
@@ -190,47 +288,28 @@ export default function Vendors() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Vendors</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Browse top vendors by total obligated contract awards.
+            Browse vendors by total obligated contract awards.
           </p>
         </div>
 
         <div className="flex items-center rounded-lg border bg-muted p-1 gap-1 shrink-0">
-          <button
-            onClick={() => setViewMode('table')}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-              viewMode === 'table'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <LayoutList className="h-4 w-4" />
-            Table
-          </button>
-          <button
-            onClick={() => setViewMode('globe')}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-              viewMode === 'globe'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Globe2 className="h-4 w-4" />
-            Globe
-          </button>
-          <button
-            onClick={() => setViewMode('map')}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
-              viewMode === 'map'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
-          >
-            <Map className="h-4 w-4" />
-            Map
-          </button>
+          {[
+            { id: 'table', icon: <LayoutList className="h-4 w-4" />, label: 'Table' },
+            { id: 'globe', icon: <Globe2      className="h-4 w-4" />, label: 'Globe' },
+          ].map(({ id, icon, label }) => (
+            <button
+              key={id}
+              onClick={() => setViewMode(id)}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                viewMode === id
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {icon}{label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -251,6 +330,7 @@ export default function Vendors() {
             onRetry={fetchVendors}
             limit={pagination.limit}
             onRowClick={handleRowClick}
+            selectedVendorId={selectedVendorId}
           />
           {paginationMeta && (
             <VendorsPagination
@@ -279,22 +359,12 @@ export default function Vendors() {
         </Suspense>
       )}
 
-      {/* MAP VIEW */}
-      {viewMode === 'map' && (
-        <VendorMap onStateClick={(stateData) => {
-          // Optionally filter table to that state when user clicks a state bubble
-          handleFilterChange('stateCode', stateData.stateCode);
-          setViewMode('table');
-        }} />
-      )}
-
-      {/* Vendor detail drawer — shared between both views */}
+      {/* Vendor detail drawer */}
       <VendorDetailDrawer
-        cageCode={selectedVendor?.cageCode ?? selectedVendor?.uei}
-        vendorId={selectedVendor?.vendorId}
+        cageCode={selectedVendor?.cageCode ?? selectedVendor?.uei ?? selectedVendorId}
         vendorName={selectedVendor?.name}
         open={drawerOpen}
-        onOpenChange={setDrawerOpen}
+        onOpenChange={handleDrawerClose}
       />
     </div>
   );

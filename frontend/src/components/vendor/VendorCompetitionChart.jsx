@@ -38,7 +38,7 @@ export default function VendorCompetitionChart({ data }) {
   );
 
   const chartData = data.map((d) => ({
-    name: d.extentCompeted ?? d.extent_competed ?? d.label ?? 'Unknown',
+    name: d.extentCompetedName ?? d.extentCompeted ?? d.extent_competed ?? d.label ?? 'Unknown',
     value: Number(d.count ?? d.awardCount ?? d.award_count ?? 0),
   }));
 

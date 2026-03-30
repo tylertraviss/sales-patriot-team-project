@@ -30,9 +30,9 @@ function WinRateDonut({ pct }) {
       <div className="relative w-20 h-20 shrink-0">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={data} innerRadius={26} outerRadius={36} dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
-              <Cell fill="#3b82f6" />
-              <Cell fill="#e2e8f0" />
+              <Pie data={data} innerRadius={26} outerRadius={36} dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
+              <Cell fill="var(--chart-1)" />
+              <Cell fill="var(--chart-5)" />
             </Pie>
           </PieChart>
         </ResponsiveContainer>
